@@ -62,6 +62,20 @@ const stepHelp = {
   ],
 } as const;
 type PostalResult = { localities: string[]; district: string; state: string };
+function districtKey(district: string) {
+  const value = district.toLowerCase().replace(/[^a-z]/g, "");
+  const aliases: Record<string, string> = {
+    kanchipuram: "kancheepuram",
+    kanyakumari: "kanniyakumari",
+    thiruvallur: "tiruvallur",
+    tirupattur: "tirupathur",
+    tuticorin: "thoothukudi",
+    villupuram: "viluppuram",
+    thenilgiris: "nilgiris",
+    trichy: "tiruchirappalli",
+  };
+  return aliases[value] || value;
+}
 async function lookupPostalAddress(pin: string): Promise<PostalResult> {
   if (firebaseConfigured) {
     try {
@@ -472,6 +486,7 @@ function Details({
               : r.localities[0],
             district: r.district,
             state: r.state,
+            constituency: "",
           });
           setPostalStatus(
             localized(
@@ -496,6 +511,11 @@ function Details({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value.pin, lang]);
   const selectedMla = mlas.find((x) => x.constituency === value.constituency);
+  const districtMlas = value.district
+    ? mlas.filter(
+        (mla) => districtKey(mla.district) === districtKey(value.district),
+      )
+    : [];
   const fields: [keyof Student, string, string?][] = [
     ["name", localized(lang, "Full name", "முழுப் பெயர்")],
     ["email", localized(lang, "Email address", "மின்னஞ்சல் முகவரி"), "email"],
@@ -586,7 +606,9 @@ function Details({
           className="field bg-slate-100"
           value={value.district}
           readOnly={localities.length > 0}
-          onChange={(e) => set({ ...value, district: e.target.value })}
+          onChange={(e) =>
+            set({ ...value, district: e.target.value, constituency: "" })
+          }
         />
       </label>
       <label>
@@ -595,57 +617,90 @@ function Details({
       </label>
       <label className="sm:col-span-2">
         <span className="label">
-          {localized(lang, "Assembly constituency", "சட்டமன்றத் தொகுதி")}
+          {localized(
+            lang,
+            "Select your Assembly constituency and MLA",
+            "உங்கள் சட்டமன்றத் தொகுதி மற்றும் உறுப்பினரைத் தேர்ந்தெடுக்கவும்",
+          )}
         </span>
         <select
           className="field"
           value={value.constituency}
           onChange={(e) => set({ ...value, constituency: e.target.value })}
+          disabled={!value.district || districtMlas.length === 0}
         >
           <option value="">
             {localized(
               lang,
-              "Select your constituency",
-              "உங்கள் தொகுதியைத் தேர்ந்தெடுக்கவும்",
+              value.district
+                ? `Select from ${value.district} district`
+                : "Enter your PIN code first",
+              value.district
+                ? `${value.district} மாவட்டத்திலிருந்து தேர்ந்தெடுக்கவும்`
+                : "முதலில் அஞ்சல் குறியீட்டை உள்ளிடவும்",
             )}
           </option>
-          {mlas.map((x) => (
+          {districtMlas.map((x) => (
             <option key={x.id} value={x.constituency}>
-              {x.constituency}
+              {x.name} — {x.constituency}
             </option>
           ))}
         </select>
         <span className="mt-1 block text-sm text-slate-500">
           {localized(
             lang,
-            "PIN codes may cover more than one constituency. Please confirm your selection.",
-            "ஒரு அஞ்சல் குறியீடு ஒன்றுக்கு மேற்பட்ட தொகுதிகளை உள்ளடக்கலாம். உங்கள் தேர்வை உறுதிப்படுத்தவும்.",
+            districtMlas.length
+              ? `${districtMlas.length} Assembly representatives are listed for this district. Confirm your constituency carefully.`
+              : "Representatives will appear after the postal district is identified.",
+            districtMlas.length
+              ? `இந்த மாவட்டத்தில் ${districtMlas.length} சட்டமன்ற உறுப்பினர்கள் பட்டியலிடப்பட்டுள்ளனர். உங்கள் தொகுதியை கவனமாக உறுதிப்படுத்தவும்.`
+              : "அஞ்சல் மாவட்டம் கண்டறியப்பட்டதும் உறுப்பினர்கள் காண்பிக்கப்படுவார்கள்.",
           )}
         </span>
       </label>
       {selectedMla && (
         <aside
-          className="sm:col-span-2 rounded-xl border border-green/30 bg-green/5 p-4"
+          className="sm:col-span-2 overflow-hidden rounded-2xl border border-green/30 bg-green/5 p-4 sm:p-5"
           aria-live="polite"
         >
-          <p className="text-sm font-semibold uppercase tracking-wide text-green">
-            {localized(lang, "Your MLA", "உங்கள் சட்டமன்ற உறுப்பினர்")}
-          </p>
-          <p className="mt-2 text-lg font-bold text-navy">{selectedMla.name}</p>
-          <p>{selectedMla.constituency}</p>
-          <p className="mt-1 break-all text-sm">{selectedMla.email}</p>
-          <a
-            className="mt-2 inline-block text-sm font-semibold text-green underline"
-            href={selectedMla.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {localized(
-              lang,
-              "Verified Assembly source",
-              "சட்டமன்ற ஆதாரத்தில் சரிபார்க்கப்பட்டது",
-            )}
-          </a>
+          <div className="flex items-start gap-4">
+            <img
+              src={selectedMla.photoUrl}
+              alt={`${selectedMla.name}, MLA for ${selectedMla.constituency}`}
+              className="h-28 w-24 shrink-0 rounded-xl border border-white bg-white object-cover shadow-sm sm:h-36 sm:w-28"
+              loading="lazy"
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wider text-green sm:text-sm">
+                {localized(
+                  lang,
+                  "Confirm your MLA",
+                  "உங்கள் சட்டமன்ற உறுப்பினரை உறுதிப்படுத்தவும்",
+                )}
+              </p>
+              <p className="mt-2 text-lg font-bold text-navy sm:text-xl">
+                {selectedMla.name}
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-700">
+                {selectedMla.constituency} · {selectedMla.district}
+              </p>
+              <p className="mt-2 break-all text-sm text-slate-700">
+                {selectedMla.email}
+              </p>
+              <a
+                className="mt-3 inline-block text-sm font-semibold text-green underline"
+                href={selectedMla.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {localized(
+                  lang,
+                  "Verified 17th Assembly source",
+                  "17வது சட்டமன்ற ஆதாரத்தில் சரிபார்க்கப்பட்டது",
+                )}
+              </a>
+            </div>
+          </div>
         </aside>
       )}
     </div>

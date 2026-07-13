@@ -74,7 +74,9 @@ export const listMlas = onCall({ region, enforceAppCheck: true }, async () => {
           id: d.id,
           name: x.mlaName,
           constituency: x.constituency,
+          district: x.district,
           email: x.email,
+          photoUrl: x.photoUrl,
           sourceUrl: x.sourceUrl,
           verifiedAt: x.lastVerifiedDate,
         };
