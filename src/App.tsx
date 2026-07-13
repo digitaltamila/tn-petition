@@ -8,7 +8,7 @@ import { Legal } from "./pages/Legal";
 import { Admin } from "./pages/Admin";
 export default function App() {
   const [lang, setLang] = useState<Lang>(
-    (localStorage.getItem("lang") as Lang) || "ta",
+    (localStorage.getItem("lang") as Lang) || "en",
   );
   const change = (l: Lang) => {
     setLang(l);

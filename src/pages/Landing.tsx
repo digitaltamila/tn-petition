@@ -64,6 +64,101 @@ export function Landing({ lang }: { lang: Lang }) {
         </div>
       </section>
 
+      <section className="border-b border-slate-200 bg-slate-50 py-14 sm:py-16">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="max-w-3xl">
+            <span className="text-sm font-bold uppercase tracking-[.2em] text-green">
+              {localized(
+                lang,
+                "About this service",
+                "இந்தச் சேவையைப் பற்றி",
+              )}
+            </span>
+            <h2 className="mt-3 text-2xl font-bold text-navy sm:text-3xl">
+              {localized(
+                lang,
+                "Purpose of this application",
+                "இந்தச் செயலியின் நோக்கம்",
+              )}
+            </h2>
+            <p className="mt-4 leading-7 text-slate-600">
+              {localized(
+                lang,
+                "This independent public-interest web application by Muppadai Training Academy is intended for Tamil Nadu police recruitment aspirants. It helps one applicant at a time prepare a personalised representation about pending recruitment results, 2026 PC and SI notifications, and age relaxation, and send it to relevant public officials selected from the applicant’s location.",
+                "முப்படை பயிற்சி அகாடமியின் இந்தச் சுயாதீன பொதுநல இணையச் செயலி தமிழ்நாடு காவல்துறை ஆட்சேர்ப்புத் தேர்வர்களுக்கானது. நிலுவைத் தேர்வு முடிவுகள், 2026 PC மற்றும் SI அறிவிப்புகள், வயது தளர்வு ஆகியவை தொடர்பான தனிப்பட்ட மனுவை ஒவ்வொரு விண்ணப்பதாரரும் தயாரித்து, தங்கள் இருப்பிடத்தின் அடிப்படையில் தேர்ந்தெடுக்கப்பட்ட உரிய பொது அதிகாரிகளுக்கு அனுப்ப உதவுகிறது.",
+              )}
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-5 lg:grid-cols-2">
+            <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-navy/10">
+                  <FilePenLine className="text-navy" size={22} />
+                </div>
+                <h3 className="text-xl font-bold text-navy">
+                  {localized(lang, "What the applicant does", "விண்ணப்பதாரர் செய்வது")}
+                </h3>
+              </div>
+              <p className="mt-4 leading-7 text-slate-600">
+                {localized(
+                  lang,
+                  "The applicant enters their own details, adds a signature and consent, reviews the complete petition PDF, verifies the recipients and approves the final email. Nothing is sent automatically, and the service does not support bulk sending.",
+                  "விண்ணப்பதாரர் தமது சொந்த விவரங்களை உள்ளிட்டு, கையொப்பம் மற்றும் ஒப்புதலைச் சேர்த்து, முழு மனு PDF, பெறுநர்கள் மற்றும் இறுதி மின்னஞ்சலை ஆய்வு செய்கிறார். எதுவும் தானாக அனுப்பப்படாது; மொத்த அனுப்புதல் ஆதரிக்கப்படாது.",
+                )}
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm sm:p-7">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-green/10">
+                  <MailCheck className="text-green" size={22} />
+                </div>
+                <h3 className="text-xl font-bold text-navy">
+                  {localized(
+                    lang,
+                    "Why Google access is requested",
+                    "Google அணுகல் ஏன் கோரப்படுகிறது",
+                  )}
+                </h3>
+              </div>
+              <p className="mt-4 leading-7 text-slate-600">
+                {localized(
+                  lang,
+                  "After the applicant reviews the petition, they may connect their own Google account. The application requests basic account identity and the Gmail send-only permission solely to send that one reviewed petition from the applicant’s account after final confirmation. It does not read inbox messages, drafts, contacts or Gmail settings, and the temporary access token is not retained after submission.",
+                  "மனுவை ஆய்வு செய்த பிறகு விண்ணப்பதாரர் தமது Google கணக்கை இணைக்கலாம். இறுதி உறுதிப்படுத்தலுக்குப் பிறகு, ஆய்வு செய்யப்பட்ட அந்த ஒரு மனுவை விண்ணப்பதாரரின் கணக்கிலிருந்து அனுப்புவதற்காக மட்டுமே அடிப்படை கணக்கு அடையாளம் மற்றும் Gmail அனுப்பும் அனுமதி கோரப்படுகிறது. Inbox செய்திகள், drafts, contacts அல்லது Gmail settings வாசிக்கப்படாது; தற்காலிக access token சமர்ப்பித்த பிறகு சேமிக்கப்படாது.",
+                )}
+              </p>
+            </article>
+          </div>
+
+          <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm font-semibold">
+            <Link className="text-green hover:underline" to="/privacy">
+              {localized(lang, "Privacy policy", "தனியுரிமைக் கொள்கை")}
+            </Link>
+            <Link className="text-green hover:underline" to="/terms">
+              {localized(lang, "Terms of use", "பயன்பாட்டு விதிகள்")}
+            </Link>
+            <Link className="text-green hover:underline" to="/contact">
+              {localized(lang, "Contact", "தொடர்பு")}
+            </Link>
+            <a
+              className="text-slate-600 hover:text-green hover:underline"
+              href="mailto:info@muppadaitrainingacademy.com"
+            >
+              info@muppadaitrainingacademy.com
+            </a>
+          </div>
+          <p className="mt-5 text-sm leading-6 text-slate-500">
+            {localized(
+              lang,
+              "This is an independent initiative and is not affiliated with, operated by or endorsed by the Tamil Nadu Government.",
+              "இது ஒரு சுயாதீன முயற்சி; தமிழ்நாடு அரசுடன் இணைக்கப்பட்டதோ, அரசால் இயக்கப்படுவதோ அல்லது அங்கீகரிக்கப்பட்டதோ அல்ல.",
+            )}
+          </p>
+        </div>
+      </section>
+
       <section className="bg-white py-16 sm:py-20">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl text-center">
