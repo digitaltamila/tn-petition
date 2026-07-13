@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { auth, functions } from "../firebase";
+import { auth, firebaseConfigured, functions } from "../firebase";
 import { SignaturePad } from "../components/SignaturePad";
 import { Modal } from "../components/Modal";
 import type { Draft, Lang, Mla, Prepared, Recipient, Student } from "../types";
@@ -61,6 +61,26 @@ const stepHelp = {
     "உள்நுழைவதற்கு முன் மின்னஞ்சல் மற்றும் இணைப்புகளை ஆய்வு செய்யவும்.",
   ],
 } as const;
+type PostalResult = { localities: string[]; district: string; state: string };
+async function lookupPostalAddress(pin: string): Promise<PostalResult> {
+  if (firebaseConfigured) {
+    try {
+      const response = await httpsCallable<{ pin: string }, PostalResult>(
+        functions,
+        "lookupPin",
+      )({ pin });
+      return response.data;
+    } catch {
+      /* Cloudflare fallback below */
+    }
+  }
+  const response = await fetch(`/api/pincode/${encodeURIComponent(pin)}`, {
+    headers: { accept: "application/json" },
+  });
+  const payload = (await response.json()) as PostalResult & { error?: string };
+  if (!response.ok) throw new Error(payload.error || "Postal lookup failed");
+  return payload;
+}
 export function Petition({ lang }: { lang: Lang }) {
   const [step, setStep] = useState(0),
     [student, setStudent] = useState(blank),
@@ -442,22 +462,16 @@ function Details({
           "அஞ்சல் முகவரியைத் தேடுகிறது…",
         ),
       );
-      void httpsCallable<
-        { pin: string },
-        { localities: string[]; district: string; state: string }
-      >(
-        functions,
-        "lookupPin",
-      )({ pin: value.pin })
+      void lookupPostalAddress(value.pin)
         .then((r) => {
-          setLocalities(r.data.localities);
+          setLocalities(r.localities);
           set({
             ...value,
-            town: r.data.localities.includes(value.town)
+            town: r.localities.includes(value.town)
               ? value.town
-              : r.data.localities[0],
-            district: r.data.district,
-            state: r.data.state,
+              : r.localities[0],
+            district: r.district,
+            state: r.state,
           });
           setPostalStatus(
             localized(
