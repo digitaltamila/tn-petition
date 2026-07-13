@@ -5,7 +5,7 @@ import { auth, functions } from "../firebase";
 import { SignaturePad } from "../components/SignaturePad";
 import { Modal } from "../components/Modal";
 import type { Draft, Lang, Mla, Prepared, Recipient, Student } from "../types";
-import { t } from "../i18n";
+import { localized, t } from "../i18n";
 const blank: Student = {
   name: "",
   email: "",
@@ -21,12 +21,20 @@ const blank: Student = {
   registration: "",
   dob: "",
 };
-const consentText = [
-  "I confirm that the information I entered is accurate.",
-  "I authorise this application to generate the petition using my details and signature.",
-  "I authorise this application to send this specific email from my Gmail account after I review and approve it.",
-  "I understand that this application is not affiliated with the Tamil Nadu Government.",
-];
+const consentText = {
+  en: [
+    "I confirm that the information I entered is accurate.",
+    "I authorise this application to generate this petition using my details and signature.",
+    "I authorise this application to send this specific email from my Gmail account only after I review and approve it.",
+    "I understand that this application is not affiliated with the Tamil Nadu Government.",
+  ],
+  ta: [
+    "நான் உள்ளிட்ட தகவல்கள் சரியானவை என்பதை உறுதிப்படுத்துகிறேன்.",
+    "எனது விவரங்கள் மற்றும் கையொப்பத்தைப் பயன்படுத்தி இந்த மனுவை உருவாக்க அனுமதிக்கிறேன்.",
+    "நான் ஆய்வு செய்து ஒப்புதல் அளித்த பிறகு மட்டுமே, இந்த குறிப்பிட்ட மின்னஞ்சலை எனது Gmail கணக்கிலிருந்து அனுப்ப அனுமதிக்கிறேன்.",
+    "இந்தச் செயலி தமிழ்நாடு அரசுடன் இணைக்கப்படவில்லை என்பதைப் புரிந்துகொள்கிறேன்.",
+  ],
+};
 const steps = [
   "details",
   "signature",
@@ -35,6 +43,24 @@ const steps = [
   "recipients",
   "email",
 ] as const;
+const stepHelp = {
+  en: [
+    "Tell us who you are and which examination you applied for.",
+    "Add the signature that will appear on your petition.",
+    "Read and approve each statement before continuing.",
+    "Check your personalised petition carefully.",
+    "Confirm the verified authorities who will receive your petition.",
+    "Review the exact email and attachments before signing in.",
+  ],
+  ta: [
+    "உங்கள் விவரங்களையும் விண்ணப்பித்த தேர்வையும் உள்ளிடவும்.",
+    "மனுவில் இடம்பெறும் உங்கள் கையொப்பத்தைச் சேர்க்கவும்.",
+    "தொடர்வதற்கு முன் ஒவ்வொரு அறிக்கையையும் படித்து ஒப்புதல் அளிக்கவும்.",
+    "தனிப்பட்ட மனுவை முழுமையாகச் சரிபார்க்கவும்.",
+    "மனுவைப் பெறும் சரிபார்க்கப்பட்ட அதிகாரிகளை உறுதிப்படுத்தவும்.",
+    "உள்நுழைவதற்கு முன் மின்னஞ்சல் மற்றும் இணைப்புகளை ஆய்வு செய்யவும்.",
+  ],
+} as const;
 export function Petition({ lang }: { lang: Lang }) {
   const [step, setStep] = useState(0),
     [student, setStudent] = useState(blank),
@@ -44,6 +70,7 @@ export function Petition({ lang }: { lang: Lang }) {
     [selected, setSelected] = useState<string[]>([]),
     [prepared, setPrepared] = useState<Prepared>(),
     [error, setError] = useState(""),
+    [showErrors, setShowErrors] = useState(false),
     [busy, setBusy] = useState(false),
     [modal, setModal] = useState(false),
     [success, setSuccess] = useState<{
@@ -67,43 +94,103 @@ export function Petition({ lang }: { lang: Lang }) {
           setRecipients(r.data.recipients);
           setSelected(r.data.recipients.map((x) => x.id));
         } catch {
-          setError("Verified recipient list is currently unavailable.");
+          setError(
+            localized(
+              lang,
+              "Verified recipient list is currently unavailable.",
+              "சரிபார்க்கப்பட்ட பெறுநர் பட்டியல் தற்போது கிடைக்கவில்லை.",
+            ),
+          );
         }
       })();
-  }, [step, student.constituency]);
+  }, [step, student.constituency, lang]);
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (student.name.trim().length < 2) e.name = "Enter your full name";
-    if (!/^\S+@\S+\.\S+$/.test(student.email)) e.email = "Enter a valid email";
+    if (student.name.trim().length < 2)
+      e.name = localized(
+        lang,
+        "Enter your full name",
+        "உங்கள் முழுப் பெயரை உள்ளிடவும்",
+      );
+    if (!/^\S+@\S+\.\S+$/.test(student.email))
+      e.email = localized(
+        lang,
+        "Enter a valid email",
+        "சரியான மின்னஞ்சலை உள்ளிடவும்",
+      );
     if (!/^[6-9]\d{9}$/.test(student.mobile))
-      e.mobile = "Enter a valid 10-digit Indian mobile";
+      e.mobile = localized(
+        lang,
+        "Enter a valid 10-digit Indian mobile number",
+        "சரியான 10 இலக்க கைப்பேசி எண்ணை உள்ளிடவும்",
+      );
     if (student.address.trim().length < 8)
-      e.address = "Enter the full postal address";
-    if (!student.town) e.town = "Required";
-    if (!student.district) e.district = "Required";
+      e.address = localized(
+        lang,
+        "Enter your house and street address",
+        "வீட்டு மற்றும் தெரு முகவரியை உள்ளிடவும்",
+      );
+    if (!student.town) e.town = localized(lang, "Required", "கட்டாயம்");
+    if (!student.district) e.district = localized(lang, "Required", "கட்டாயம்");
     if (student.state !== "Tamil Nadu") e.state = "Tamil Nadu address required";
-    if (!/^\d{6}$/.test(student.pin)) e.pin = "Enter 6-digit PIN";
-    if (!student.exam) e.exam = "Required";
-    if (!/^20\d{2}$/.test(student.examYear)) e.examYear = "Invalid year";
+    if (!/^\d{6}$/.test(student.pin))
+      e.pin = localized(
+        lang,
+        "Enter a 6-digit PIN code",
+        "6 இலக்க அஞ்சல் குறியீட்டை உள்ளிடவும்",
+      );
+    if (!student.exam) e.exam = localized(lang, "Required", "கட்டாயம்");
+    if (!/^20\d{2}$/.test(student.examYear))
+      e.examYear = localized(
+        lang,
+        "Enter a valid year",
+        "சரியான ஆண்டை உள்ளிடவும்",
+      );
     return e;
-  }, [student]);
+  }, [student, lang]);
   const next = async () => {
     setError("");
     if (step === 0 && Object.keys(errors).length) {
-      setError("Please correct the highlighted fields.");
+      setShowErrors(true);
+      setError(
+        localized(
+          lang,
+          "Please correct the highlighted fields.",
+          "குறிக்கப்பட்டுள்ள விவரங்களைச் சரிசெய்யவும்.",
+        ),
+      );
       return;
     }
+    if (step === 0) setShowErrors(false);
     if (step === 1 && !signature) {
-      setError("Please add your signature.");
+      setError(
+        localized(
+          lang,
+          "Please add your signature.",
+          "உங்கள் கையொப்பத்தைச் சேர்க்கவும்.",
+        ),
+      );
       return;
     }
     if (step === 2 && !consents.every(Boolean)) {
-      setError("All consent statements are required.");
+      setError(
+        localized(
+          lang,
+          "All consent statements are required.",
+          "அனைத்து ஒப்புதல் அறிக்கைகளும் கட்டாயம்.",
+        ),
+      );
       return;
     }
     if (step === 4) {
       if (!selected.length) {
-        setError("Select at least one verified recipient.");
+        setError(
+          localized(
+            lang,
+            "Select at least one verified recipient.",
+            "குறைந்தது ஒரு சரிபார்க்கப்பட்ட பெறுநரைத் தேர்ந்தெடுக்கவும்.",
+          ),
+        );
         return;
       }
       await prepare();
@@ -182,27 +269,51 @@ export function Petition({ lang }: { lang: Lang }) {
       setBusy(false);
     }
   };
-  if (success) return <Success data={success} />;
+  if (success) return <Success lang={lang} data={success} />;
   return (
-    <div className="mx-auto max-w-4xl px-3 py-6 pb-28 sm:px-4 md:py-10">
+    <div className="mx-auto max-w-5xl px-3 py-6 pb-28 sm:px-4 md:py-10">
+      <div className="mb-4 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+        <span>
+          {localized(
+            lang,
+            `Step ${step + 1} of ${steps.length}`,
+            `படி ${step + 1} / ${steps.length}`,
+          )}
+        </span>
+        <span>{Math.round(((step + 1) / steps.length) * 100)}%</span>
+      </div>
+      <div className="mb-7 h-2 overflow-hidden rounded-full bg-slate-200">
+        <div
+          className="h-full rounded-full bg-green transition-all duration-500"
+          style={{ width: `${((step + 1) / steps.length) * 100}%` }}
+        />
+      </div>
       <ol
-        className="mb-6 flex snap-x gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-6 md:overflow-visible"
+        className="mb-7 flex snap-x gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-6 md:overflow-visible"
         aria-label="Progress"
       >
         {steps.map((s, i) => (
           <li
             key={s}
-            className={`min-w-28 snap-start rounded-lg p-2 text-center text-xs font-semibold md:min-w-0 ${i <= step ? "bg-navy text-white" : "bg-slate-200"}`}
+            className={`flex min-w-32 snap-start items-center gap-2 rounded-xl border p-2 text-left text-xs font-semibold md:min-w-0 md:flex-col md:border-0 md:bg-transparent md:text-center ${i === step ? "border-navy bg-navy text-white md:text-navy" : i < step ? "border-green/30 bg-emerald-50 text-green" : "border-slate-200 bg-white text-slate-400"}`}
             aria-current={i === step ? "step" : undefined}
           >
-            {i + 1}. {t(lang, s)}
+            <span
+              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold ${i === step ? "bg-white text-navy" : i < step ? "bg-green text-white" : "bg-slate-200 text-slate-500"}`}
+            >
+              {i < step ? "✓" : i + 1}
+            </span>
+            <span>{t(lang, s)}</span>
           </li>
         ))}
       </ol>
-      <section className="card rounded-xl p-4 sm:p-6 md:rounded-2xl md:p-7">
-        <h1 className="mb-6 text-2xl font-bold text-navy">
+      <section className="card rounded-2xl border-0 p-4 shadow-xl shadow-slate-200/60 sm:p-7 md:p-9">
+        <h1 className="text-2xl font-bold text-navy sm:text-3xl">
           {t(lang, steps[step])}
         </h1>
+        <p className="mb-7 mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+          {stepHelp[lang][step]}
+        </p>
         {error && (
           <div
             role="alert"
@@ -212,14 +323,19 @@ export function Petition({ lang }: { lang: Lang }) {
           </div>
         )}
         {step === 0 && (
-          <Details value={student} set={setStudent} errors={errors} />
+          <Details
+            lang={lang}
+            value={student}
+            set={setStudent}
+            errors={showErrors ? errors : {}}
+          />
         )}{" "}
         {step === 1 && (
-          <SignaturePad value={signature} onChange={setSignature} />
+          <SignaturePad lang={lang} value={signature} onChange={setSignature} />
         )}{" "}
         {step === 2 && (
           <div className="space-y-4">
-            {consentText.map((x, i) => (
+            {consentText[lang].map((x, i) => (
               <label
                 key={x}
                 className="flex cursor-pointer gap-3 rounded-lg border p-4"
@@ -238,19 +354,28 @@ export function Petition({ lang }: { lang: Lang }) {
               </label>
             ))}
             <p className="text-sm text-slate-500">
-              Consent version 1.0 · Timestamp recorded on the server.
+              {localized(
+                lang,
+                "Consent version 1.0 · Your approval time is recorded securely.",
+                "ஒப்புதல் பதிப்பு 1.0 · உங்கள் ஒப்புதல் நேரம் பாதுகாப்பாகப் பதிவு செய்யப்படும்.",
+              )}
             </p>
           </div>
         )}{" "}
-        {step === 3 && <Preview student={student} signature={signature} />}{" "}
+        {step === 3 && (
+          <Preview lang={lang} student={student} signature={signature} />
+        )}{" "}
         {step === 4 && (
           <RecipientSelect
             recipients={recipients}
             selected={selected}
             set={setSelected}
+            lang={lang}
           />
         )}{" "}
-        {step === 5 && prepared && <EmailReview prepared={prepared} />}
+        {step === 5 && prepared && (
+          <EmailReview lang={lang} prepared={prepared} />
+        )}
         <div className="fixed inset-x-0 bottom-0 z-30 flex justify-between gap-3 border-t bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,.12)] backdrop-blur md:static md:mt-8 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
           {step > 0 && (
             <button
@@ -267,14 +392,19 @@ export function Petition({ lang }: { lang: Lang }) {
             onClick={step === 5 ? () => setModal(true) : next}
           >
             {busy
-              ? "Please wait…"
+              ? localized(lang, "Please wait…", "காத்திருக்கவும்…")
               : step === 5
-                ? "Review and Send Petition"
+                ? localized(
+                    lang,
+                    "Review and send petition",
+                    "ஆய்வு செய்து மனுவை அனுப்பவும்",
+                  )
                 : t(lang, "continue")}
           </button>
         </div>
       </section>
       <Modal
+        lang={lang}
         open={modal}
         onClose={() => setModal(false)}
         onConfirm={send}
@@ -284,10 +414,12 @@ export function Petition({ lang }: { lang: Lang }) {
   );
 }
 function Details({
+  lang,
   value,
   set,
   errors,
 }: {
+  lang: Lang;
   value: Student;
   set: (s: Student) => void;
   errors: Record<string, string>;
@@ -303,7 +435,13 @@ function Details({
   useEffect(() => {
     if (!/^6\d{5}$/.test(value.pin)) return;
     const timer = window.setTimeout(() => {
-      setPostalStatus("Looking up postal address…");
+      setPostalStatus(
+        localized(
+          lang,
+          "Looking up postal address…",
+          "அஞ்சல் முகவரியைத் தேடுகிறது…",
+        ),
+      );
       void httpsCallable<
         { pin: string },
         { localities: string[]; district: string; state: string }
@@ -321,28 +459,52 @@ function Details({
             district: r.data.district,
             state: r.data.state,
           });
-          setPostalStatus("Address found. Please confirm your locality.");
+          setPostalStatus(
+            localized(
+              lang,
+              "Address found. Please confirm your locality.",
+              "முகவரி கண்டறியப்பட்டது. உங்கள் ஊரை உறுதிப்படுத்தவும்.",
+            ),
+          );
         })
         .catch(() =>
           setPostalStatus(
-            "Postal lookup unavailable. Enter the address manually.",
+            localized(
+              lang,
+              "Postal lookup unavailable. Enter the address manually.",
+              "அஞ்சல் முகவரி சேவை தற்போது கிடைக்கவில்லை. முகவரியை உள்ளிடவும்.",
+            ),
           ),
         );
     }, 350);
     return () => window.clearTimeout(timer);
     // The lookup must rerun only when PIN changes; including the populated address would create a request loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value.pin]);
+  }, [value.pin, lang]);
   const selectedMla = mlas.find((x) => x.constituency === value.constituency);
   const fields: [keyof Student, string, string?][] = [
-    ["name", "Full name / முழுப் பெயர்"],
-    ["email", "Email / மின்னஞ்சல்", "email"],
-    ["mobile", "Mobile number / கைப்பேசி", "tel"],
-    ["address", "House/Street address / வீட்டு முகவரி"],
-    ["exam", "Examination applied for / தேர்வு"],
-    ["examYear", "Examination year / ஆண்டு"],
-    ["registration", "Candidate registration number (optional)"],
-    ["dob", "Date of birth (optional)", "date"],
+    ["name", localized(lang, "Full name", "முழுப் பெயர்")],
+    ["email", localized(lang, "Email address", "மின்னஞ்சல் முகவரி"), "email"],
+    ["mobile", localized(lang, "Mobile number", "கைப்பேசி எண்"), "tel"],
+    [
+      "address",
+      localized(lang, "House and street address", "வீட்டு மற்றும் தெரு முகவரி"),
+    ],
+    ["exam", localized(lang, "Examination applied for", "விண்ணப்பித்த தேர்வு")],
+    ["examYear", localized(lang, "Examination year", "தேர்வு ஆண்டு")],
+    [
+      "registration",
+      localized(
+        lang,
+        "Candidate registration number (optional)",
+        "விண்ணப்பப் பதிவு எண் (விருப்பம்)",
+      ),
+    ],
+    [
+      "dob",
+      localized(lang, "Date of birth (optional)", "பிறந்த தேதி (விருப்பம்)"),
+      "date",
+    ],
   ];
   return (
     <div className="grid gap-5 sm:grid-cols-2">
@@ -366,7 +528,9 @@ function Details({
         </label>
       ))}
       <label>
-        <span className="label">PIN code / அஞ்சல் குறியீடு</span>
+        <span className="label">
+          {localized(lang, "PIN code", "அஞ்சல் குறியீடு")}
+        </span>
         <input
           inputMode="numeric"
           className={`field ${errors.pin ? "border-red-500" : ""}`}
@@ -381,7 +545,9 @@ function Details({
         </span>
       </label>
       <label>
-        <span className="label">Village or town / ஊர்</span>
+        <span className="label">
+          {localized(lang, "Village or town", "கிராமம் அல்லது நகரம்")}
+        </span>
         {localities.length ? (
           <select
             className="field"
@@ -401,7 +567,7 @@ function Details({
         )}
       </label>
       <label>
-        <span className="label">District / மாவட்டம்</span>
+        <span className="label">{localized(lang, "District", "மாவட்டம்")}</span>
         <input
           className="field bg-slate-100"
           value={value.district}
@@ -410,17 +576,25 @@ function Details({
         />
       </label>
       <label>
-        <span className="label">State / மாநிலம்</span>
+        <span className="label">{localized(lang, "State", "மாநிலம்")}</span>
         <input className="field bg-slate-100" value={value.state} readOnly />
       </label>
       <label className="sm:col-span-2">
-        <span className="label">Assembly constituency / சட்டமன்றத் தொகுதி</span>
+        <span className="label">
+          {localized(lang, "Assembly constituency", "சட்டமன்றத் தொகுதி")}
+        </span>
         <select
           className="field"
           value={value.constituency}
           onChange={(e) => set({ ...value, constituency: e.target.value })}
         >
-          <option value="">Select after confirming your locality</option>
+          <option value="">
+            {localized(
+              lang,
+              "Select your constituency",
+              "உங்கள் தொகுதியைத் தேர்ந்தெடுக்கவும்",
+            )}
+          </option>
           {mlas.map((x) => (
             <option key={x.id} value={x.constituency}>
               {x.constituency}
@@ -428,8 +602,11 @@ function Details({
           ))}
         </select>
         <span className="mt-1 block text-sm text-slate-500">
-          PIN codes are postal areas and do not uniquely identify constituency
-          boundaries. Please confirm this selection.
+          {localized(
+            lang,
+            "PIN codes may cover more than one constituency. Please confirm your selection.",
+            "ஒரு அஞ்சல் குறியீடு ஒன்றுக்கு மேற்பட்ட தொகுதிகளை உள்ளடக்கலாம். உங்கள் தேர்வை உறுதிப்படுத்தவும்.",
+          )}
         </span>
       </label>
       {selectedMla && (
@@ -438,7 +615,7 @@ function Details({
           aria-live="polite"
         >
           <p className="text-sm font-semibold uppercase tracking-wide text-green">
-            Your MLA / உங்கள் சட்டமன்ற உறுப்பினர்
+            {localized(lang, "Your MLA", "உங்கள் சட்டமன்ற உறுப்பினர்")}
           </p>
           <p className="mt-2 text-lg font-bold text-navy">{selectedMla.name}</p>
           <p>{selectedMla.constituency}</p>
@@ -449,7 +626,11 @@ function Details({
             target="_blank"
             rel="noreferrer"
           >
-            Verified Tamil Nadu Assembly source
+            {localized(
+              lang,
+              "Verified Assembly source",
+              "சட்டமன்ற ஆதாரத்தில் சரிபார்க்கப்பட்டது",
+            )}
           </a>
         </aside>
       )}
@@ -457,54 +638,68 @@ function Details({
   );
 }
 function Preview({
+  lang,
   student,
   signature,
 }: {
+  lang: Lang;
   student: Student;
   signature: string;
 }) {
   return (
-    <div className="rounded border bg-white p-5 leading-8">
-      <p>
-        இடம்: {student.town}
-        <br />
-        தேதி: {new Date().toLocaleDateString("en-IN")}
-      </p>
-      <p className="mt-4">
-        <b>அனுப்புநர்:</b>
-        <br />
-        {student.name}
-        <br />
-        {student.address}, {student.town}, {student.district} - {student.pin}
-        <br />
-        {student.mobile} · {student.email}
-      </p>
-      <p className="mt-4">
-        <b>பொருள்:</b> காவல்துறை ஆட்சேர்ப்பு முடிவுகள், 2026 PC/SI அறிவிப்புகள்
-        மற்றும் வயது தளர்வு கோருதல்.
-      </p>
-      <p className="mt-4">
-        மதிப்பிற்குரிய ஐயா/அம்மையீர், காவல்துறையில் பணியாற்ற ஆவலுடன்
-        தயாராகிவரும் விண்ணப்பதாரர்கள் சார்பாக, நிலுவையில் உள்ள தேர்வு முடிவுகளை
-        விரைந்து வெளியிடவும், 2026 ஆம் ஆண்டுக்கான இரண்டாம் நிலைக் காவலர் மற்றும்
-        சார்பு ஆய்வாளர் ஆட்சேர்ப்பு அறிவிப்புகளை விரைவில் வெளியிடவும், அறிவிப்பு
-        மற்றும் தேர்வு தாமதங்களால் வயது வரம்பை இழந்த விண்ணப்பதாரர்களுக்கு உரிய
-        வயது தளர்வு வழங்கவும் பணிவுடன் கேட்டுக்கொள்கிறேன்.
-      </p>
-      <img
-        src={signature}
-        alt="Applicant signature"
-        className="mt-6 h-20 max-w-52 object-contain"
-      />
-      <p>{student.name}</p>
+    <div>
+      <div className="mb-4 rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
+        {localized(
+          lang,
+          "The official petition is generated in Tamil. Verify your personal details below.",
+          "அதிகாரப்பூர்வ மனு தமிழில் உருவாக்கப்படும். கீழே உங்கள் தனிப்பட்ட விவரங்களைச் சரிபார்க்கவும்.",
+        )}
+      </div>
+      <div className="rounded-xl border bg-white p-5 leading-8">
+        <p>
+          இடம்: {student.town}
+          <br />
+          தேதி: {new Date().toLocaleDateString("en-IN")}
+        </p>
+        <p className="mt-4">
+          <b>அனுப்புநர்:</b>
+          <br />
+          {student.name}
+          <br />
+          {student.address}, {student.town}, {student.district} - {student.pin}
+          <br />
+          {student.mobile} · {student.email}
+        </p>
+        <p className="mt-4">
+          <b>பொருள்:</b> காவல்துறை ஆட்சேர்ப்பு முடிவுகள், 2026 PC/SI
+          அறிவிப்புகள் மற்றும் வயது தளர்வு கோருதல்.
+        </p>
+        <p className="mt-4">
+          மதிப்பிற்குரிய ஐயா/அம்மையீர், காவல்துறையில் பணியாற்ற ஆவலுடன்
+          தயாராகிவரும் விண்ணப்பதாரர்கள் சார்பாக, நிலுவையில் உள்ள தேர்வு
+          முடிவுகளை விரைந்து வெளியிடவும், 2026 ஆம் ஆண்டுக்கான இரண்டாம் நிலைக்
+          காவலர் மற்றும் சார்பு ஆய்வாளர் ஆட்சேர்ப்பு அறிவிப்புகளை விரைவில்
+          வெளியிடவும், அறிவிப்பு மற்றும் தேர்வு தாமதங்களால் வயது வரம்பை இழந்த
+          விண்ணப்பதாரர்களுக்கு உரிய வயது தளர்வு வழங்கவும் பணிவுடன்
+          கேட்டுக்கொள்கிறேன்.
+        </p>
+        <img
+          src={signature}
+          alt="Applicant signature"
+          className="mt-6 h-20 max-w-52 object-contain"
+        />
+        <p>{student.name}</p>
+      </div>
     </div>
   );
 }
 function RecipientSelect({
+  lang,
   recipients,
   selected,
   set,
 }: {
+  lang: Lang;
   recipients: Recipient[];
   selected: string[];
   set: (x: string[]) => void;
@@ -513,12 +708,18 @@ function RecipientSelect({
     <div className="space-y-3">
       {recipients.length === 0 ? (
         <p>
-          No active, officially verified recipients are configured. An
-          administrator must verify official sources before launch.
+          {localized(
+            lang,
+            "No active, officially verified recipients are configured yet.",
+            "செயலில் உள்ள சரிபார்க்கப்பட்ட பெறுநர்கள் இன்னும் அமைக்கப்படவில்லை.",
+          )}
         </p>
       ) : (
         recipients.map((r) => (
-          <label className="flex gap-3 rounded-lg border p-4" key={r.id}>
+          <label
+            className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${selected.includes(r.id) ? "border-green bg-emerald-50/60" : "border-slate-200 hover:border-slate-300"}`}
+            key={r.id}
+          >
             <input
               type="checkbox"
               className="h-5 w-5"
@@ -535,8 +736,12 @@ function RecipientSelect({
               <b>{r.departmentName}</b>
               <br />
               <span className="text-sm text-slate-500">
-                {r.recipientType} · {r.delivery.toUpperCase()} · verified{" "}
-                {r.lastVerifiedDate}
+                {localized(
+                  lang,
+                  "Officially verified",
+                  "அதிகாரப்பூர்வமாக சரிபார்க்கப்பட்டது",
+                )}{" "}
+                · {r.delivery.toUpperCase()} · {r.lastVerifiedDate}
               </span>
             </span>
           </label>
@@ -545,17 +750,21 @@ function RecipientSelect({
     </div>
   );
 }
-function EmailReview({ prepared }: { prepared: Prepared }) {
+function EmailReview({ lang, prepared }: { lang: Lang; prepared: Prepared }) {
   return (
     <div>
       <dl className="grid gap-2">
-        <dt className="font-bold">To / CC</dt>
+        <dt className="font-bold">
+          {localized(lang, "Recipients", "பெறுநர்கள்")}
+        </dt>
         <dd>
           {prepared.recipients
             .map((r) => `${r.departmentName} (${r.delivery.toUpperCase()})`)
             .join(", ")}
         </dd>
-        <dt className="mt-3 font-bold">Subject</dt>
+        <dt className="mt-3 font-bold">
+          {localized(lang, "Subject", "பொருள்")}
+        </dt>
         <dd>{prepared.emailSubject}</dd>
       </dl>
       <pre className="mt-5 whitespace-pre-wrap rounded-lg bg-slate-50 p-4 font-sans text-sm">
@@ -570,7 +779,9 @@ function EmailReview({ prepared }: { prepared: Prepared }) {
               downloadPdf(attachment.pdfBase64, attachment.fileName)
             }
           >
-            {attachment.kind === "mla" ? "MLA petition" : "Government petition"}
+            {attachment.kind === "mla"
+              ? localized(lang, "MLA petition", "சட்டமன்ற உறுப்பினர் மனு")
+              : localized(lang, "Government petition", "அரசுத் துறை மனு")}
             : {attachment.departmentName}
           </button>
         ))}
@@ -579,8 +790,10 @@ function EmailReview({ prepared }: { prepared: Prepared }) {
   );
 }
 function Success({
+  lang,
   data,
 }: {
+  lang: Lang;
   data: {
     reference: string;
     sentAt: string;
@@ -593,7 +806,11 @@ function Success({
     <div className="card mx-auto my-12 max-w-2xl text-center">
       <div className="text-5xl">✓</div>
       <h1 className="mt-4 text-3xl font-bold text-green">
-        Petition sent successfully
+        {localized(
+          lang,
+          "Petition sent successfully",
+          "மனு வெற்றிகரமாக அனுப்பப்பட்டது",
+        )}
       </h1>
       <p className="mt-5 text-xl font-bold">{data.reference}</p>
       <p>
@@ -609,11 +826,15 @@ function Success({
               downloadPdf(attachment.pdfBase64, attachment.fileName)
             }
           >
-            Download {attachment.kind === "mla" ? "MLA" : "Government"} PDF
+            {localized(lang, "Download", "பதிவிறக்கவும்")}{" "}
+            {attachment.kind === "mla"
+              ? "MLA"
+              : localized(lang, "Government", "அரசு")}{" "}
+            PDF
           </button>
         ))}
         <button className="btn-primary" onClick={() => window.print()}>
-          Print acknowledgement
+          {localized(lang, "Print acknowledgement", "ஒப்புகையை அச்சிடவும்")}
         </button>
       </div>
     </div>
