@@ -18,7 +18,9 @@ export type Mla = {
   id: string;
   name: string;
   constituency: string;
+  district: string;
   email: string;
+  photoUrl: string;
   sourceUrl: string;
   verifiedAt: string;
 };
