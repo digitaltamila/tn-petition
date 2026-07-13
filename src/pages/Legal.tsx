@@ -38,7 +38,7 @@ const copy = {
     contact: [
       "Contact",
       [
-        "Contact Muppadai Training Academy through the support address configured for this service. Never send passwords, OTPs, Aadhaar or banking information.",
+        "For support, privacy questions or data deletion requests, contact Muppadai Training Academy at info@muppadaitrainingacademy.com. Never send passwords, OTPs, Aadhaar or banking information.",
       ],
     ],
   },
@@ -78,7 +78,7 @@ const copy = {
     contact: [
       "தொடர்பு",
       [
-        "அமைக்கப்பட்ட ஆதரவு முகவரி மூலம் முப்படை பயிற்சி அகாடமியைத் தொடர்புகொள்ளவும். கடவுச்சொல், OTP, Aadhaar அல்லது வங்கி விவரங்களை அனுப்ப வேண்டாம்.",
+        "ஆதரவு, தனியுரிமைக் கேள்விகள் அல்லது தரவு நீக்கக் கோரிக்கைகளுக்கு info@muppadaitrainingacademy.com என்ற முகவரியில் முப்படை பயிற்சி அகாடமியைத் தொடர்புகொள்ளவும். கடவுச்சொல், OTP, Aadhaar அல்லது வங்கி விவரங்களை அனுப்ப வேண்டாம்.",
       ],
     ],
   },
