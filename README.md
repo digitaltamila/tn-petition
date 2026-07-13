@@ -45,6 +45,10 @@ The current dashboard manages recipients. Aggregate charts, campaign settings an
 
 Run `npm run lint`, `npm run test`, `npm run build`, `npm --prefix functions run build`, then exercise the emulator flow. Deploy with `firebase deploy`. Gmail test mode is Google OAuth’s consent-screen Testing status: add explicit test users and use only unverified placeholder recipients in a separate emulator/project. There is intentionally no backend bypass that pretends a message was sent.
 
+### Cloudflare Pages frontend
+
+Connect this repository to Cloudflare Pages with production branch `main`, framework preset `Vite`, build command `npm run build`, output directory `dist`, and no root-directory override. Set `NODE_VERSION=22.16.0` plus the `VITE_*` values documented in `.env.example`. The files in `public/` are copied into the deployment and provide SPA route fallback, CSP/security headers, and immutable caching for fingerprinted assets. Firebase Functions remain deployed separately through Firebase; Cloudflare hosts only the frontend.
+
 Before launch visually inspect generated PDFs on Android, iOS and desktop PDF viewers, including long Tamil names/addresses, multi-page output, page numbers and signature. Test keyboard focus, screen reader labels, expired envelopes, mismatched Gmail, duplicate Gmail/registration, invalid App Check, disabled campaign, Gmail rejection, retry/idempotency, mobile widths and all legal links.
 
 ## Security checklist
