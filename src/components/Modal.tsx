@@ -37,7 +37,7 @@ export function Modal({
         </div>
         <h2
           id="confirm-title"
-          className="mt-4 text-center text-2xl font-bold text-navy"
+          className="mt-4 text-center text-xl font-bold text-navy sm:text-2xl"
         >
           {localized(lang, "Final confirmation", "இறுதி உறுதிப்படுத்தல்")}
         </h2>
