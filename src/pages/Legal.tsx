@@ -96,7 +96,7 @@ export function Legal({ lang }: { lang: Lang }) {
         <span className="text-sm font-bold uppercase tracking-wider text-green">
           Muppadai Training Academy
         </span>
-        <h1 className="mt-3 text-3xl font-bold text-navy sm:text-4xl">
+        <h1 className="mt-3 text-2xl font-bold text-navy sm:text-3xl">
           {section[0]}
         </h1>
         <div className="mt-7 space-y-5 leading-8 text-slate-600">

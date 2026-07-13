@@ -4,10 +4,14 @@
 @tailwind utilities;
 @layer base {
   html {
-    @apply scroll-smooth;
+    @apply max-w-full scroll-smooth overflow-x-hidden;
   }
   body {
-    @apply min-h-screen bg-[#f5f7fb] text-slate-900 antialiased;
+    @apply min-h-screen max-w-full overflow-x-hidden bg-[#f5f7fb] text-slate-900 antialiased;
+  }
+  img,
+  svg {
+    @apply max-w-full;
   }
   ::selection {
     @apply bg-green/20 text-navy;

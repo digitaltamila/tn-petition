@@ -1,23 +1,25 @@
 import { Link } from "react-router-dom";
 import type { Lang } from "../types";
 import { localized, t } from "../i18n";
-import { firebaseConfigured } from "../firebase";
+import { firebaseBackendReady } from "../firebase";
 
 function Brand({ lang }: { lang: Lang }) {
   return (
     <Link
       to="/"
-      className="flex min-w-0 items-center gap-3"
+      className="flex min-w-0 items-center gap-2 sm:gap-3"
       aria-label="Muppadai Training Academy home"
     >
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-navy text-xs font-extrabold tracking-tight text-white shadow-sm ring-2 ring-green/20">
-        MTA
-      </span>
+      <img
+        src="/muppadai-logo.png"
+        alt="Muppadai Training Academy logo"
+        className="h-10 w-10 shrink-0 object-contain sm:h-12 sm:w-12"
+      />
       <span className="min-w-0 leading-tight">
-        <strong className="block truncate text-sm text-navy sm:text-base">
+        <strong className="block truncate text-xs text-navy min-[380px]:text-sm sm:text-base">
           Muppadai Training Academy
         </strong>
-        <span className="block text-[10px] font-semibold uppercase tracking-[.12em] text-green sm:text-xs">
+        <span className="hidden text-[10px] font-semibold uppercase tracking-[.1em] text-green min-[380px]:block sm:text-xs">
           {localized(lang, "Public initiative", "பொதுநல முயற்சி")}
         </span>
       </span>
@@ -37,10 +39,10 @@ export function Layout({
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 sm:px-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
           <Brand lang={lang} />
           <button
-            className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-navy transition hover:border-green hover:bg-emerald-50"
+            className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-navy transition hover:border-green hover:bg-emerald-50 sm:px-3 sm:text-sm"
             onClick={() => setLang(lang === "ta" ? "en" : "ta")}
             aria-label={localized(lang, "Switch to Tamil", "Switch to English")}
           >
@@ -48,12 +50,12 @@ export function Layout({
           </button>
         </div>
       </header>
-      {!firebaseConfigured && (
+      {!firebaseBackendReady && (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 sm:text-sm">
           {localized(
             lang,
-            "Preview mode — secure submission services will be enabled after Firebase setup.",
-            "முன்னோட்ட முறை — Firebase அமைப்பிற்குப் பிறகு பாதுகாப்பான சமர்ப்பிப்பு சேவைகள் இயக்கப்படும்.",
+            "Firebase database connected — secure submission will open after backend activation.",
+            "Firebase தரவுத்தளம் இணைக்கப்பட்டது — பின்தள சேவை செயல்படுத்தப்பட்டதும் பாதுகாப்பான சமர்ப்பிப்பு தொடங்கும்.",
           )}
         </div>
       )}
@@ -63,9 +65,11 @@ export function Layout({
           <div className="grid gap-8 border-b border-white/10 pb-8 md:grid-cols-[1.3fr_.7fr]">
             <div>
               <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-xs font-extrabold text-navy">
-                  MTA
-                </span>
+                <img
+                  src="/muppadai-logo.png"
+                  alt="Muppadai Training Academy logo"
+                  className="h-16 w-16 shrink-0 rounded-xl bg-white/95 p-1 object-contain"
+                />
                 <div>
                   <strong className="block text-white">
                     Muppadai Training Academy

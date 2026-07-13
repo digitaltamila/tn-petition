@@ -328,7 +328,7 @@ export function Petition({ lang }: { lang: Lang }) {
         ))}
       </ol>
       <section className="card rounded-2xl border-0 p-4 shadow-xl shadow-slate-200/60 sm:p-7 md:p-9">
-        <h1 className="text-2xl font-bold text-navy sm:text-3xl">
+        <h1 className="text-xl font-bold text-navy sm:text-2xl">
           {t(lang, steps[step])}
         </h1>
         <p className="mb-7 mt-2 text-sm leading-6 text-slate-600 sm:text-base">
@@ -819,7 +819,7 @@ function Success({
   return (
     <div className="card mx-auto my-12 max-w-2xl text-center">
       <div className="text-5xl">✓</div>
-      <h1 className="mt-4 text-3xl font-bold text-green">
+      <h1 className="mt-4 text-2xl font-bold text-green sm:text-3xl">
         {localized(
           lang,
           "Petition sent successfully",

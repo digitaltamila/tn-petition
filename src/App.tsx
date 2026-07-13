@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import type { Lang } from "./types";
 import { Layout } from "./components/Layout";
@@ -14,6 +14,9 @@ export default function App() {
     setLang(l);
     localStorage.setItem("lang", l);
   };
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
   return (
     <Layout lang={lang} setLang={change}>
       <Routes>

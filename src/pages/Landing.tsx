@@ -23,7 +23,7 @@ export function Landing({ lang }: { lang: Lang }) {
               <Sparkles size={16} />
               {c.eyebrow}
             </div>
-            <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.15] sm:text-5xl lg:text-6xl">
+            <h1 className="mt-6 max-w-3xl text-3xl font-bold leading-[1.2] sm:text-4xl lg:text-5xl">
               {c.heroTitle}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-slate-200 sm:text-lg">
@@ -70,7 +70,7 @@ export function Landing({ lang }: { lang: Lang }) {
             <span className="text-sm font-bold uppercase tracking-[.2em] text-green">
               {localized(lang, "How it works", "இது எவ்வாறு செயல்படுகிறது")}
             </span>
-            <h2 className="mt-3 text-3xl font-bold text-navy sm:text-4xl">
+            <h2 className="mt-3 text-2xl font-bold text-navy sm:text-3xl">
               {c.processTitle}
             </h2>
             <p className="mt-4 leading-7 text-slate-600">{c.processText}</p>
@@ -128,6 +128,11 @@ export function Landing({ lang }: { lang: Lang }) {
             </div>
           </div>
           <div className="px-2">
+            <img
+              src="/muppadai-logo.png"
+              alt="Muppadai Training Academy logo"
+              className="mb-5 h-24 w-24 object-contain"
+            />
             <p className="text-sm font-bold uppercase tracking-[.2em] text-green">
               {localized(lang, "Initiative by", "முன்னெடுப்பு")}
             </p>
