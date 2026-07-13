@@ -63,6 +63,17 @@ const stepHelp = {
 } as const;
 type PostalResult = { localities: string[]; district: string; state: string };
 type GmailAuthorization = { accessToken: string; email: string };
+type MlaDirectory = {
+  sourceUrl: string;
+  verifiedAt: string;
+  members: Array<{
+    name: string;
+    constituency: string;
+    district: string;
+    email: string;
+    photoUrl: string;
+  }>;
+};
 function districtKey(district: string) {
   const value = district.toLowerCase().replace(/[^a-z]/g, "");
   const aliases: Record<string, string> = {
@@ -498,12 +509,56 @@ function Details({
   gmailBusy: boolean;
 }) {
   const [mlas, setMlas] = useState<Mla[]>([]),
+    [mlaStatus, setMlaStatus] = useState<"loading" | "ready" | "error">(
+      "loading",
+    ),
     [localities, setLocalities] = useState<string[]>([]),
     [postalStatus, setPostalStatus] = useState("");
   useEffect(() => {
-    void httpsCallable<undefined, { mlas: Mla[] }>(functions, "listMlas")()
-      .then((r) => setMlas(r.data.mlas))
-      .catch(() => setMlas([]));
+    let cancelled = false;
+    void (async () => {
+      let localDirectoryLoaded = false;
+      try {
+        const response = await fetch("/data/mla-directory.json");
+        if (!response.ok) throw new Error("MLA directory unavailable");
+        const directory = (await response.json()) as MlaDirectory;
+        const localMlas = directory.members
+          .map((member) => ({
+            ...member,
+            id: member.constituency.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+            sourceUrl: directory.sourceUrl,
+            verifiedAt: directory.verifiedAt,
+          }))
+          .sort((a, b) => a.constituency.localeCompare(b.constituency));
+        if (!localMlas.length) throw new Error("MLA directory is empty");
+        localDirectoryLoaded = true;
+        if (!cancelled) {
+          setMlas(localMlas);
+          setMlaStatus("ready");
+        }
+      } catch {
+        /* The verified Firebase directory remains available as a fallback. */
+      }
+
+      try {
+        const response = await httpsCallable<undefined, { mlas: Mla[] }>(
+          functions,
+          "listMlas",
+        )();
+        if (!cancelled && response.data.mlas.length) {
+          setMlas(response.data.mlas);
+          setMlaStatus("ready");
+        }
+      } catch {
+        if (!cancelled && !localDirectoryLoaded) {
+          setMlas([]);
+          setMlaStatus("error");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   useEffect(() => {
     if (!/^6\d{5}$/.test(value.pin)) return;
@@ -726,12 +781,20 @@ function Details({
           <option value="">
             {localized(
               lang,
-              value.district
-                ? `Select from ${value.district} district`
-                : "Enter your PIN code first",
-              value.district
-                ? `${value.district} மாவட்டத்திலிருந்து தேர்ந்தெடுக்கவும்`
-                : "முதலில் அஞ்சல் குறியீட்டை உள்ளிடவும்",
+              !value.district
+                ? "Enter your PIN code first"
+                : mlaStatus === "loading"
+                  ? "Please wait — fetching constituency and MLA details…"
+                  : mlaStatus === "error"
+                    ? "MLA directory is temporarily unavailable"
+                    : `Select from ${value.district} district`,
+              !value.district
+                ? "முதலில் அஞ்சல் குறியீட்டை உள்ளிடவும்"
+                : mlaStatus === "loading"
+                  ? "தயவுசெய்து காத்திருக்கவும் — தொகுதி மற்றும் MLA விவரங்கள் பெறப்படுகின்றன…"
+                  : mlaStatus === "error"
+                    ? "MLA பட்டியல் தற்போது கிடைக்கவில்லை"
+                    : `${value.district} மாவட்டத்திலிருந்து தேர்ந்தெடுக்கவும்`,
             )}
           </option>
           {districtMlas.map((x) => (
@@ -743,12 +806,24 @@ function Details({
         <span className="mt-1 block text-sm text-slate-500">
           {localized(
             lang,
-            districtMlas.length
+            mlaStatus === "loading"
+              ? "Please wait — fetching your Assembly constituency list and MLA email IDs."
+              : mlaStatus === "error"
+                ? "The MLA directory could not be loaded. Refresh the page and try again."
+                : districtMlas.length
               ? `${districtMlas.length} Assembly representatives are listed for this district. Confirm your constituency carefully.`
-              : "Representatives will appear after the postal district is identified.",
-            districtMlas.length
+              : value.district
+                ? `No verified Assembly representatives were found for ${value.district}. Check the district name or retry the PIN code.`
+                : "Representatives will appear after the postal district is identified.",
+            mlaStatus === "loading"
+              ? "தயவுசெய்து காத்திருக்கவும் — உங்கள் தொகுதிப் பட்டியல் மற்றும் MLA மின்னஞ்சல் முகவரிகள் பெறப்படுகின்றன."
+              : mlaStatus === "error"
+                ? "MLA பட்டியலை ஏற்ற முடியவில்லை. பக்கத்தைப் புதுப்பித்து மீண்டும் முயற்சிக்கவும்."
+                : districtMlas.length
               ? `இந்த மாவட்டத்தில் ${districtMlas.length} சட்டமன்ற உறுப்பினர்கள் பட்டியலிடப்பட்டுள்ளனர். உங்கள் தொகுதியை கவனமாக உறுதிப்படுத்தவும்.`
-              : "அஞ்சல் மாவட்டம் கண்டறியப்பட்டதும் உறுப்பினர்கள் காண்பிக்கப்படுவார்கள்.",
+              : value.district
+                ? `${value.district} மாவட்டத்திற்கு சரிபார்க்கப்பட்ட சட்டமன்ற உறுப்பினர்கள் கிடைக்கவில்லை. மாவட்டப் பெயரைச் சரிபார்க்கவும் அல்லது PIN குறியீட்டை மீண்டும் முயற்சிக்கவும்.`
+                : "அஞ்சல் மாவட்டம் கண்டறியப்பட்டதும் உறுப்பினர்கள் காண்பிக்கப்படுவார்கள்.",
           )}
         </span>
       </label>
@@ -778,8 +853,16 @@ function Details({
               <p className="mt-1 text-sm font-medium text-slate-700">
                 {selectedMla.constituency} · {selectedMla.district}
               </p>
-              <p className="mt-2 break-all text-sm text-slate-700">
-                {selectedMla.email}
+              <p className="mt-2 break-all text-sm text-slate-700" aria-live="polite">
+                <span className="font-semibold">
+                  {localized(lang, "MLA email: ", "MLA மின்னஞ்சல்: ")}
+                </span>
+                {selectedMla.email ||
+                  localized(
+                    lang,
+                    "Please wait — fetching your MLA email ID…",
+                    "தயவுசெய்து காத்திருக்கவும் — உங்கள் MLA மின்னஞ்சல் முகவரி பெறப்படுகிறது…",
+                  )}
               </p>
               <a
                 className="mt-3 inline-block text-sm font-semibold text-green underline"
