@@ -1,2 +1,27 @@
-import {useState} from 'react'; import {Routes,Route} from 'react-router-dom'; import type {Lang} from './types'; import {Layout} from './components/Layout'; import {Landing} from './pages/Landing'; import {Petition} from './pages/Petition'; import {Legal} from './pages/Legal'; import {Admin} from './pages/Admin';
-export default function App(){const [lang,setLang]=useState<Lang>((localStorage.getItem('lang') as Lang)||'ta');const change=(l:Lang)=>{setLang(l);localStorage.setItem('lang',l)};return <Layout lang={lang} setLang={change}><Routes><Route path="/" element={<Landing lang={lang}/>}/><Route path="/petition" element={<Petition lang={lang}/>}/><Route path="/admin" element={<Admin/>}/><Route path="/:page" element={<Legal/>}/></Routes></Layout>}
+import { useState } from "react";
+import { Routes, Route } from "react-router-dom";
+import type { Lang } from "./types";
+import { Layout } from "./components/Layout";
+import { Landing } from "./pages/Landing";
+import { Petition } from "./pages/Petition";
+import { Legal } from "./pages/Legal";
+import { Admin } from "./pages/Admin";
+export default function App() {
+  const [lang, setLang] = useState<Lang>(
+    (localStorage.getItem("lang") as Lang) || "ta",
+  );
+  const change = (l: Lang) => {
+    setLang(l);
+    localStorage.setItem("lang", l);
+  };
+  return (
+    <Layout lang={lang} setLang={change}>
+      <Routes>
+        <Route path="/" element={<Landing lang={lang} />} />
+        <Route path="/petition" element={<Petition lang={lang} />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/:page" element={<Legal lang={lang} />} />
+      </Routes>
+    </Layout>
+  );
+}

@@ -1,51 +1,110 @@
 import { Link } from "react-router-dom";
 import type { Lang } from "../types";
-import { t } from "../i18n";
+import { localized, t } from "../i18n";
 import { firebaseConfigured } from "../firebase";
+
+function Brand({ lang }: { lang: Lang }) {
+  return (
+    <Link
+      to="/"
+      className="flex min-w-0 items-center gap-3"
+      aria-label="Muppadai Training Academy home"
+    >
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-navy text-xs font-extrabold tracking-tight text-white shadow-sm ring-2 ring-green/20">
+        MTA
+      </span>
+      <span className="min-w-0 leading-tight">
+        <strong className="block truncate text-sm text-navy sm:text-base">
+          Muppadai Training Academy
+        </strong>
+        <span className="block text-[10px] font-semibold uppercase tracking-[.12em] text-green sm:text-xs">
+          {localized(lang, "Public initiative", "பொதுநல முயற்சி")}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
 export function Layout({
   lang,
   setLang,
   children,
 }: {
   lang: Lang;
-  setLang: (l: Lang) => void;
+  setLang: (lang: Lang) => void;
   children: React.ReactNode;
 }) {
   return (
     <>
-      <header className="sticky top-0 z-40 border-b bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 sm:px-4">
-          <Link
-            to="/"
-            className="max-w-[72%] text-sm font-bold leading-tight text-navy sm:text-base"
-          >
-            {t(lang, "title")}
-          </Link>
+          <Brand lang={lang} />
           <button
-            className="btn-secondary min-h-10 shrink-0 px-3 py-2 text-sm"
+            className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-navy transition hover:border-green hover:bg-emerald-50"
             onClick={() => setLang(lang === "ta" ? "en" : "ta")}
-            aria-label="Change language"
+            aria-label={localized(lang, "Switch to Tamil", "Switch to English")}
           >
             {lang === "ta" ? "English" : "தமிழ்"}
           </button>
         </div>
       </header>
       {!firebaseConfigured && (
-        <div className="bg-amber-100 px-4 py-2 text-center text-xs font-semibold text-amber-900 sm:text-sm">
-          UI preview mode — Firebase, PDF and Gmail actions are not connected.
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 sm:text-sm">
+          {localized(
+            lang,
+            "Preview mode — secure submission services will be enabled after Firebase setup.",
+            "முன்னோட்ட முறை — Firebase அமைப்பிற்குப் பிறகு பாதுகாப்பான சமர்ப்பிப்பு சேவைகள் இயக்கப்படும்.",
+          )}
         </div>
       )}
       <main>{children}</main>
-      <footer className="mt-12 border-t bg-navy text-slate-200">
-        <div className="mx-auto grid max-w-6xl gap-5 px-4 py-8 text-sm md:grid-cols-2">
-          <p>{t(lang, "independent")}</p>
-          <nav className="flex flex-wrap gap-4 md:justify-end">
-            <Link to="/privacy">Privacy</Link>
-            <Link to="/terms">Terms</Link>
-            <Link to="/disclaimer">Disclaimer</Link>
-            <Link to="/deletion">Data deletion</Link>
-            <Link to="/contact">Contact</Link>
-          </nav>
+      <footer className="mt-0 bg-navy text-slate-300">
+        <div className="mx-auto max-w-6xl px-4 py-10">
+          <div className="grid gap-8 border-b border-white/10 pb-8 md:grid-cols-[1.3fr_.7fr]">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-xs font-extrabold text-navy">
+                  MTA
+                </span>
+                <div>
+                  <strong className="block text-white">
+                    Muppadai Training Academy
+                  </strong>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-300">
+                    {localized(lang, "Public initiative", "பொதுநல முயற்சி")}
+                  </span>
+                </div>
+              </div>
+              <p className="mt-4 max-w-xl text-sm leading-6 text-slate-400">
+                {t(lang, "independent")}
+              </p>
+            </div>
+            <nav className="grid grid-cols-2 gap-3 text-sm md:justify-self-end">
+              <Link className="hover:text-white" to="/privacy">
+                {localized(lang, "Privacy policy", "தனியுரிமை")}
+              </Link>
+              <Link className="hover:text-white" to="/terms">
+                {localized(lang, "Terms of use", "பயன்பாட்டு விதிகள்")}
+              </Link>
+              <Link className="hover:text-white" to="/disclaimer">
+                {localized(lang, "Disclaimer", "பொறுப்புத்துறப்பு")}
+              </Link>
+              <Link className="hover:text-white" to="/deletion">
+                {localized(lang, "Data deletion", "தரவு நீக்கம்")}
+              </Link>
+              <Link className="hover:text-white" to="/contact">
+                {localized(lang, "Contact", "தொடர்பு")}
+              </Link>
+            </nav>
+          </div>
+          <p className="pt-6 text-xs text-slate-500">
+            © {new Date().getFullYear()} Muppadai Training Academy.{" "}
+            {localized(
+              lang,
+              "Independent public-interest initiative.",
+              "சுயாதீன பொதுநல முயற்சி.",
+            )}
+          </p>
         </div>
       </footer>
     </>
