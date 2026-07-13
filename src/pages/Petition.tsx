@@ -587,7 +587,7 @@ function Details({
     : [];
   const fields: [keyof Student, string, string?][] = [
     ["name", localized(lang, "Full name", "முழுப் பெயர்")],
-    ["email", localized(lang, "Email address", "மின்னஞ்சல் முகவரி"), "email"],
+    ["email", localized(lang, "Gmail address", "Gmail முகவரி"), "email"],
     ["mobile", localized(lang, "Mobile number", "கைப்பேசி எண்"), "tel"],
     [
       "address",
@@ -618,6 +618,7 @@ function Details({
             className={`field ${errors[k] ? "border-red-500" : ""}`}
             type={type || "text"}
             value={value[k]}
+            placeholder={k === "email" ? "name@gmail.com" : undefined}
             onChange={(e) => {
               if (
                 k === "email" &&
@@ -661,17 +662,23 @@ function Details({
                         `✓ Gmail authorized: ${gmailAuthorization.email}`,
                         `✓ Gmail அங்கீகரிக்கப்பட்டது: ${gmailAuthorization.email}`,
                       )
-                    : localized(
-                        lang,
-                        "Authorize this Gmail account",
-                        "இந்த Gmail கணக்கை அங்கீகரிக்கவும்",
-                      )}
+                    : /^\S+@\S+\.\S+$/.test(value.email)
+                      ? localized(
+                          lang,
+                          "Authorize this Gmail account",
+                          "இந்த Gmail கணக்கை அங்கீகரிக்கவும்",
+                        )
+                      : localized(
+                          lang,
+                          "Enter Gmail address above to continue",
+                          "தொடர மேலே Gmail முகவரியை உள்ளிடவும்",
+                        )}
               </button>
               <small className="mt-2 block leading-5 text-slate-500">
                 {localized(
                   lang,
-                  "Permission is limited to sending this reviewed petition. Inbox access is not requested.",
-                  "ஆய்வு செய்யப்பட்ட இந்த மனுவை அனுப்புவதற்கு மட்டுமே அனுமதி கோரப்படுகிறது. Inbox அணுகல் கோரப்படாது.",
+                  "After entering your Gmail address, authorize the same Google account. Permission is limited to sending this reviewed petition; inbox access is not requested.",
+                  "Gmail முகவரியை உள்ளிட்ட பிறகு அதே Google கணக்கை அங்கீகரிக்கவும். இந்த மனுவை அனுப்ப மட்டும் அனுமதி கோரப்படும்; Inbox அணுகல் கோரப்படாது.",
                 )}
               </small>
             </span>
