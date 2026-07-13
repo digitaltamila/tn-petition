@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore { match /databases/{database}/documents {
+ function signedIn(){ return request.auth != null; }
+ function admin(){ return signedIn() && request.auth.token.admin == true; }
+ match /governmentRecipients/{id} { allow read: if signedIn() && (resource.data.active == true && resource.data.verificationStatus == 'verified'); allow write: if admin(); }
+ match /campaigns/{id} { allow read: if true; allow write: if admin(); }
+ match /petitions/{id} { allow read: if admin() || (signedIn() && resource.data.userUid == request.auth.uid); allow write: if false; }
+ match /stats/{id} { allow read, write: if admin(); }
+ match /failureLogs/{id} { allow read: if admin(); allow write: if false; }
+ match /blockedUsers/{id} { allow read, write: if admin(); }
+ match /{document=**} { allow read, write: if false; }
+}}

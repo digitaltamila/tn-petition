@@ -1,0 +1,3 @@
+import crypto from 'node:crypto';
+export function seal(value:unknown,keyText:string){const key=crypto.createHash('sha256').update(keyText).digest(),iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',key,iv),body=Buffer.concat([cipher.update(JSON.stringify(value)),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),body]).toString('base64url')}
+export function unseal<T>(text:string,keyText:string):T{const all=Buffer.from(text,'base64url'),key=crypto.createHash('sha256').update(keyText).digest(),d=crypto.createDecipheriv('aes-256-gcm',key,all.subarray(0,12));d.setAuthTag(all.subarray(12,28));return JSON.parse(Buffer.concat([d.update(all.subarray(28)),d.final()]).toString()) as T}
