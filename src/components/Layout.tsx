@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Lang } from "../types";
 import { localized, t } from "../i18n";
-import { firebaseBackendReady } from "../firebase";
+import { firebaseConfigured } from "../firebase";
 
 function Brand({ lang }: { lang: Lang }) {
   return (
@@ -50,12 +50,12 @@ export function Layout({
           </button>
         </div>
       </header>
-      {!firebaseBackendReady && (
+      {!firebaseConfigured && (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 sm:text-sm">
           {localized(
             lang,
-            "Firebase database connected — secure submission will open after backend activation.",
-            "Firebase தரவுத்தளம் இணைக்கப்பட்டது — பின்தள சேவை செயல்படுத்தப்பட்டதும் பாதுகாப்பான சமர்ப்பிப்பு தொடங்கும்.",
+            "Preview mode — secure submission is unavailable in this build.",
+            "முன்னோட்ட முறை — இந்தப் பதிப்பில் பாதுகாப்பான சமர்ப்பிப்பு கிடைக்காது.",
           )}
         </div>
       )}
