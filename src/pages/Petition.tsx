@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { auth, firebaseConfigured, functions } from "../firebase";
 import { SignaturePad } from "../components/SignaturePad";
@@ -62,6 +62,7 @@ const stepHelp = {
   ],
 } as const;
 type PostalResult = { localities: string[]; district: string; state: string };
+type GmailAuthorization = { accessToken: string; email: string };
 function districtKey(district: string) {
   const value = district.toLowerCase().replace(/[^a-z]/g, "");
   const aliases: Record<string, string> = {
@@ -103,6 +104,9 @@ export function Petition({ lang }: { lang: Lang }) {
     [recipients, setRecipients] = useState<Recipient[]>([]),
     [selected, setSelected] = useState<string[]>([]),
     [prepared, setPrepared] = useState<Prepared>(),
+    [gmailAuthorization, setGmailAuthorization] =
+      useState<GmailAuthorization>(),
+    [gmailBusy, setGmailBusy] = useState(false),
     [error, setError] = useState(""),
     [showErrors, setShowErrors] = useState(false),
     [busy, setBusy] = useState(false),
@@ -195,6 +199,16 @@ export function Petition({ lang }: { lang: Lang }) {
       );
       return;
     }
+    if (step === 0 && !gmailAuthorization) {
+      setError(
+        localized(
+          lang,
+          "Authorize the Gmail address before continuing.",
+          "தொடர்வதற்கு முன் Gmail முகவரியை அங்கீகரிக்கவும்.",
+        ),
+      );
+      return;
+    }
     if (step === 0) setShowErrors(false);
     if (step === 1 && !signature) {
       setError(
@@ -255,20 +269,63 @@ export function Petition({ lang }: { lang: Lang }) {
       setBusy(false);
     }
   };
-  const send = async () => {
-    setBusy(true);
+  const authorizeGmail = async () => {
     setError("");
+    if (!/^\S+@\S+\.\S+$/.test(student.email)) {
+      setShowErrors(true);
+      setError(
+        localized(
+          lang,
+          "Enter your Gmail address before authorizing it.",
+          "அங்கீகரிப்பதற்கு முன் உங்கள் Gmail முகவரியை உள்ளிடவும்.",
+        ),
+      );
+      return;
+    }
+    setGmailBusy(true);
     try {
       const provider = new GoogleAuthProvider();
       provider.addScope("https://www.googleapis.com/auth/gmail.send");
       provider.setCustomParameters({
-        prompt: "consent",
+        prompt: "select_account consent",
         login_hint: student.email,
+        include_granted_scopes: "true",
       });
       const result = await signInWithPopup(auth, provider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (!credential?.accessToken)
-        throw new Error("Gmail permission was not granted.");
+      const authorizedEmail = result.user.email?.toLowerCase();
+      if (!credential?.accessToken || !authorizedEmail) {
+        throw new Error("Gmail send permission was not granted.");
+      }
+      if (authorizedEmail !== student.email.toLowerCase()) {
+        await signOut(auth);
+        throw new Error(
+          `The selected Google account (${authorizedEmail}) does not match ${student.email}.`,
+        );
+      }
+      setGmailAuthorization({
+        accessToken: credential.accessToken,
+        email: authorizedEmail,
+      });
+    } catch (authorizationError) {
+      setGmailAuthorization(undefined);
+      setError(authMessage(authorizationError, lang));
+    } finally {
+      setGmailBusy(false);
+    }
+  };
+  const send = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      if (
+        !gmailAuthorization ||
+        gmailAuthorization.email !== student.email.toLowerCase()
+      ) {
+        throw new Error(
+          "Authorize the Gmail address in Step 1 before sending the petition.",
+        );
+      }
       const r = await httpsCallable<
         {
           gmailAccessToken: string;
@@ -286,7 +343,7 @@ export function Petition({ lang }: { lang: Lang }) {
         functions,
         "sendPetition",
       )({
-        gmailAccessToken: credential.accessToken,
+        gmailAccessToken: gmailAuthorization.accessToken,
         reference: prepared!.reference,
         idempotencyKey: prepared!.reference,
         sealed: prepared!.sealed,
@@ -362,6 +419,10 @@ export function Petition({ lang }: { lang: Lang }) {
             value={student}
             set={setStudent}
             errors={showErrors ? errors : {}}
+            gmailAuthorization={gmailAuthorization}
+            authorizeGmail={authorizeGmail}
+            clearGmailAuthorization={() => setGmailAuthorization(undefined)}
+            gmailBusy={gmailBusy}
           />
         )}{" "}
         {step === 1 && (
@@ -414,7 +475,7 @@ export function Petition({ lang }: { lang: Lang }) {
           {step > 0 && (
             <button
               className="btn-secondary"
-              disabled={busy}
+              disabled={busy || gmailBusy}
               onClick={() => setStep((s) => s - 1)}
             >
               {t(lang, "back")}
@@ -422,7 +483,7 @@ export function Petition({ lang }: { lang: Lang }) {
           )}
           <button
             className="btn-primary ml-auto"
-            disabled={busy}
+            disabled={busy || gmailBusy}
             onClick={step === 5 ? () => setModal(true) : next}
           >
             {busy
@@ -452,11 +513,19 @@ function Details({
   value,
   set,
   errors,
+  gmailAuthorization,
+  authorizeGmail,
+  clearGmailAuthorization,
+  gmailBusy,
 }: {
   lang: Lang;
   value: Student;
   set: (s: Student) => void;
   errors: Record<string, string>;
+  gmailAuthorization?: GmailAuthorization;
+  authorizeGmail: () => Promise<void>;
+  clearGmailAuthorization: () => void;
+  gmailBusy: boolean;
 }) {
   const [mlas, setMlas] = useState<Mla[]>([]),
     [localities, setLocalities] = useState<string[]>([]),
@@ -549,7 +618,16 @@ function Details({
             className={`field ${errors[k] ? "border-red-500" : ""}`}
             type={type || "text"}
             value={value[k]}
-            onChange={(e) => set({ ...value, [k]: e.target.value })}
+            onChange={(e) => {
+              if (
+                k === "email" &&
+                gmailAuthorization &&
+                e.target.value.toLowerCase() !== gmailAuthorization.email
+              ) {
+                clearGmailAuthorization();
+              }
+              set({ ...value, [k]: e.target.value });
+            }}
             maxLength={k === "address" ? 300 : 100}
             aria-invalid={!!errors[k]}
             aria-describedby={errors[k] ? `${k}-error` : undefined}
@@ -557,6 +635,45 @@ function Details({
           {errors[k] && (
             <span id={`${k}-error`} className="mt-1 block text-sm text-red-700">
               {errors[k]}
+            </span>
+          )}
+          {k === "email" && (
+            <span className="mt-2 block rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <button
+                type="button"
+                className={
+                  gmailAuthorization
+                    ? "inline-flex min-h-10 items-center rounded-lg bg-emerald-100 px-3 py-2 text-sm font-bold text-emerald-800"
+                    : "btn-secondary min-h-10 text-sm"
+                }
+                disabled={gmailBusy || !/^\S+@\S+\.\S+$/.test(value.email)}
+                onClick={() => void authorizeGmail()}
+              >
+                {gmailBusy
+                  ? localized(
+                      lang,
+                      "Opening Google…",
+                      "Google திறக்கப்படுகிறது…",
+                    )
+                  : gmailAuthorization
+                    ? localized(
+                        lang,
+                        `✓ Gmail authorized: ${gmailAuthorization.email}`,
+                        `✓ Gmail அங்கீகரிக்கப்பட்டது: ${gmailAuthorization.email}`,
+                      )
+                    : localized(
+                        lang,
+                        "Authorize this Gmail account",
+                        "இந்த Gmail கணக்கை அங்கீகரிக்கவும்",
+                      )}
+              </button>
+              <small className="mt-2 block leading-5 text-slate-500">
+                {localized(
+                  lang,
+                  "Permission is limited to sending this reviewed petition. Inbox access is not requested.",
+                  "ஆய்வு செய்யப்பட்ட இந்த மனுவை அனுப்புவதற்கு மட்டுமே அனுமதி கோரப்படுகிறது. Inbox அணுகல் கோரப்படாது.",
+                )}
+              </small>
             </span>
           )}
         </label>
@@ -917,4 +1034,35 @@ function downloadPdf(base64: string, name: string) {
 }
 function message(e: unknown) {
   return e instanceof Error ? e.message : "Something went wrong. Please retry.";
+}
+function authMessage(error: unknown, lang: Lang) {
+  const code =
+    typeof error === "object" && error && "code" in error
+      ? String(error.code)
+      : "";
+  if (
+    code === "auth/popup-closed-by-user" ||
+    code === "auth/cancelled-popup-request"
+  ) {
+    return localized(
+      lang,
+      "Google authorization was cancelled. Please try again.",
+      "Google அங்கீகாரம் ரத்து செய்யப்பட்டது. மீண்டும் முயற்சிக்கவும்.",
+    );
+  }
+  if (code === "auth/popup-blocked") {
+    return localized(
+      lang,
+      "Your browser blocked the Google sign-in window. Allow pop-ups for this site and retry.",
+      "Google உள்நுழைவு சாளரத்தை உலாவி தடுத்தது. இந்த தளத்திற்கு pop-up அனுமதித்து மீண்டும் முயற்சிக்கவும்.",
+    );
+  }
+  if (code === "auth/internal-error") {
+    return localized(
+      lang,
+      "Google authorization could not start. Refresh the page and retry; if it continues, clear this site's cookies.",
+      "Google அங்கீகாரத்தைத் தொடங்க முடியவில்லை. பக்கத்தைப் புதுப்பித்து மீண்டும் முயற்சிக்கவும்; தொடர்ந்தால் இந்த தளத்தின் cookies-ஐ அழிக்கவும்.",
+    );
+  }
+  return message(error);
 }

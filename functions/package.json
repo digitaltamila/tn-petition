@@ -14,7 +14,6 @@
     "deploy": "firebase deploy --only functions"
   },
   "dependencies": {
-    "@fontsource/noto-sans-tamil": "latest",
     "@google-cloud/functions-framework": "latest",
     "cheerio": "latest",
     "firebase-admin": "latest",

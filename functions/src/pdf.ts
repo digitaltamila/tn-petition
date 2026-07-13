@@ -25,10 +25,7 @@ export async function makePdf(
     }),
     chunks: Buffer[] = [];
   doc.on("data", (x) => chunks.push(x));
-  const font = path.resolve(
-    process.cwd(),
-    "node_modules/@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff",
-  );
+  const font = path.resolve(process.cwd(), "assets/NotoSansTamil.ttf");
   doc.registerFont("Tamil", font).font("Tamil").fontSize(10);
   doc
     .fillColor("#102a43")
