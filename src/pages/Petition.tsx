@@ -74,6 +74,37 @@ type MlaDirectory = {
     photoUrl: string;
   }>;
 };
+function mlaRecipientId(email: string) {
+  return `mla_${email.split("@")[0].replace(/^mla/, "")}`;
+}
+async function loadLocalMlas(): Promise<Mla[]> {
+  const response = await fetch("/data/mla-directory.json");
+  if (!response.ok) throw new Error("MLA directory unavailable");
+  const directory = (await response.json()) as MlaDirectory;
+  const mlas = directory.members
+    .map((member) => ({
+      ...member,
+      id: mlaRecipientId(member.email),
+      sourceUrl: directory.sourceUrl,
+      verifiedAt: directory.verifiedAt,
+    }))
+    .sort((a, b) => a.constituency.localeCompare(b.constituency));
+  if (!mlas.length) throw new Error("MLA directory is empty");
+  return mlas;
+}
+function mlaAsRecipient(mla: Mla): Recipient {
+  return {
+    id: mla.id,
+    departmentName: `Member of Legislative Assembly — ${mla.constituency} (${mla.name})`,
+    email: mla.email,
+    recipientType: "mla",
+    delivery: "to",
+    active: true,
+    verificationStatus: "verified",
+    lastVerifiedDate: mla.verifiedAt,
+    sourceUrl: mla.sourceUrl,
+  };
+}
 function districtKey(district: string) {
   const value = district.toLowerCase().replace(/[^a-z]/g, "");
   const aliases: Record<string, string> = {
@@ -113,6 +144,7 @@ export function Petition({ lang }: { lang: Lang }) {
     [signature, setSignature] = useState(""),
     [consents, setConsents] = useState([false, false, false, false]),
     [recipients, setRecipients] = useState<Recipient[]>([]),
+    [recipientsLoading, setRecipientsLoading] = useState(false),
     [selected, setSelected] = useState<string[]>([]),
     [prepared, setPrepared] = useState<Prepared>(),
     [gmailAuthorization, setGmailAuthorization] =
@@ -133,19 +165,57 @@ export function Petition({ lang }: { lang: Lang }) {
     void loadGoogleIdentity().catch(() => undefined);
   }, []);
   useEffect(() => {
-    if (step === 4)
-      void (async () => {
-        try {
-          const r = await httpsCallable<
-            { constituency: string },
-            { recipients: Recipient[] }
-          >(
-            functions,
-            "listRecipients",
-          )({ constituency: student.constituency });
-          setRecipients(r.data.recipients);
-          setSelected(r.data.recipients.map((x) => x.id));
-        } catch {
+    if (step !== 4) return;
+    let cancelled = false;
+    void (async () => {
+      let localRecipient: Recipient | undefined;
+      try {
+        const localMlas = await loadLocalMlas();
+        const mla = localMlas.find(
+          (member) => member.constituency === student.constituency,
+        );
+        if (mla) {
+          localRecipient = mlaAsRecipient(mla);
+          if (!cancelled) {
+            setRecipients([localRecipient]);
+            setSelected([localRecipient.id]);
+            setRecipientsLoading(false);
+            setError("");
+          }
+        }
+      } catch {
+        /* The Firebase directory remains available below. */
+      }
+
+      try {
+        const r = await httpsCallable<
+          { constituency: string },
+          { recipients: Recipient[] }
+        >(functions, "listRecipients")({
+          constituency: student.constituency,
+        });
+        if (cancelled) return;
+        const remoteRecipients = r.data.recipients;
+        const hasMla = remoteRecipients.some(
+          (recipient) => recipient.recipientType === "mla",
+        );
+        const nextRecipients =
+          localRecipient && !hasMla
+            ? [...remoteRecipients, localRecipient]
+            : remoteRecipients;
+        if (nextRecipients.length) {
+          setRecipients(nextRecipients);
+          setSelected(nextRecipients.map((recipient) => recipient.id));
+          setRecipientsLoading(false);
+          setError("");
+        } else if (!localRecipient) {
+          throw new Error("No verified recipients found");
+        }
+      } catch {
+        if (!cancelled && !localRecipient) {
+          setRecipients([]);
+          setSelected([]);
+          setRecipientsLoading(false);
           setError(
             localized(
               lang,
@@ -154,7 +224,11 @@ export function Petition({ lang }: { lang: Lang }) {
             ),
           );
         }
-      })();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [step, student.constituency, lang]);
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -243,6 +317,11 @@ export function Petition({ lang }: { lang: Lang }) {
         ),
       );
       return;
+    }
+    if (step === 3) {
+      setRecipients([]);
+      setSelected([]);
+      setRecipientsLoading(true);
     }
     if (step === 4) {
       if (!selected.length) {
@@ -446,6 +525,7 @@ export function Petition({ lang }: { lang: Lang }) {
         {step === 4 && (
           <RecipientSelect
             recipients={recipients}
+            loading={recipientsLoading}
             selected={selected}
             set={setSelected}
             lang={lang}
@@ -519,18 +599,7 @@ function Details({
     void (async () => {
       let localDirectoryLoaded = false;
       try {
-        const response = await fetch("/data/mla-directory.json");
-        if (!response.ok) throw new Error("MLA directory unavailable");
-        const directory = (await response.json()) as MlaDirectory;
-        const localMlas = directory.members
-          .map((member) => ({
-            ...member,
-            id: member.constituency.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-            sourceUrl: directory.sourceUrl,
-            verifiedAt: directory.verifiedAt,
-          }))
-          .sort((a, b) => a.constituency.localeCompare(b.constituency));
-        if (!localMlas.length) throw new Error("MLA directory is empty");
+        const localMlas = await loadLocalMlas();
         localDirectoryLoaded = true;
         if (!cancelled) {
           setMlas(localMlas);
@@ -639,25 +708,62 @@ function Details({
       {fields.map(([k, l, type]) => (
         <label key={k} className={k === "address" ? "md:col-span-2" : ""}>
           <span className="label">{l}</span>
-          <input
-            className={`field ${errors[k] ? "border-red-500" : ""}`}
-            type={type || "text"}
-            value={value[k]}
-            placeholder={
-              k === "email"
-                ? localized(
-                    lang,
-                    "Selected automatically from Google",
-                    "Google கணக்கிலிருந்து தானாகத் தேர்ந்தெடுக்கப்படும்",
-                  )
-                : undefined
-            }
-            readOnly={k === "email"}
-            onChange={(e) => set({ ...value, [k]: e.target.value })}
-            maxLength={k === "address" ? 300 : 100}
-            aria-invalid={!!errors[k]}
-            aria-describedby={errors[k] ? `${k}-error` : undefined}
-          />
+          {k === "mobile" ? (
+            <span
+              className={`flex overflow-hidden rounded-xl border bg-white focus-within:border-green focus-within:ring-2 focus-within:ring-green/20 ${errors.mobile ? "border-red-500" : "border-slate-300"}`}
+            >
+              <span
+                className="flex shrink-0 items-center gap-2 border-r border-slate-200 bg-slate-50 px-3 font-semibold text-navy sm:px-4"
+                aria-hidden="true"
+              >
+                <span className="text-xl">🇮🇳</span>
+                <span>+91</span>
+              </span>
+              <input
+                className="min-h-12 min-w-0 flex-1 border-0 bg-transparent px-3 py-3 text-base outline-none sm:px-4"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                pattern="[6-9][0-9]{9}"
+                maxLength={10}
+                value={value.mobile}
+                placeholder="10-digit mobile number"
+                onChange={(e) =>
+                  set({
+                    ...value,
+                    mobile: e.target.value.replace(/\D/g, "").slice(0, 10),
+                  })
+                }
+                aria-label={localized(
+                  lang,
+                  "Indian mobile number",
+                  "இந்திய கைப்பேசி எண்",
+                )}
+                aria-invalid={!!errors.mobile}
+                aria-describedby={errors.mobile ? "mobile-error" : undefined}
+              />
+            </span>
+          ) : (
+            <input
+              className={`field ${errors[k] ? "border-red-500" : ""}`}
+              type={type || "text"}
+              value={value[k]}
+              placeholder={
+                k === "email"
+                  ? localized(
+                      lang,
+                      "Selected automatically from Google",
+                      "Google கணக்கிலிருந்து தானாகத் தேர்ந்தெடுக்கப்படும்",
+                    )
+                  : undefined
+              }
+              readOnly={k === "email"}
+              onChange={(e) => set({ ...value, [k]: e.target.value })}
+              maxLength={k === "address" ? 300 : 100}
+              aria-invalid={!!errors[k]}
+              aria-describedby={errors[k] ? `${k}-error` : undefined}
+            />
+          )}
           {errors[k] && (
             <span id={`${k}-error`} className="mt-1 block text-sm text-red-700">
               {errors[k]}
@@ -942,17 +1048,27 @@ function Preview({
 function RecipientSelect({
   lang,
   recipients,
+  loading,
   selected,
   set,
 }: {
   lang: Lang;
   recipients: Recipient[];
+  loading: boolean;
   selected: string[];
   set: (x: string[]) => void;
 }) {
   return (
     <div className="space-y-3">
-      {recipients.length === 0 ? (
+      {loading ? (
+        <p className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-900" role="status">
+          {localized(
+            lang,
+            "Please wait — fetching your verified MLA email ID…",
+            "தயவுசெய்து காத்திருக்கவும் — உங்கள் சரிபார்க்கப்பட்ட MLA மின்னஞ்சல் முகவரி பெறப்படுகிறது…",
+          )}
+        </p>
+      ) : recipients.length === 0 ? (
         <p>
           {localized(
             lang,
@@ -988,6 +1104,10 @@ function RecipientSelect({
                   "அதிகாரப்பூர்வமாக சரிபார்க்கப்பட்டது",
                 )}{" "}
                 · {r.delivery.toUpperCase()} · {r.lastVerifiedDate}
+              </span>
+              <span className="mt-2 block break-all text-sm font-semibold text-navy">
+                {localized(lang, "Email: ", "மின்னஞ்சல்: ")}
+                {r.email}
               </span>
             </span>
           </label>
