@@ -8,4 +8,5 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {files:['src/**/*.{ts,tsx}'],languageOptions:{globals:globals.browser},plugins:{'react-hooks':hooks,'react-refresh':refresh},rules:{...hooks.configs.recommended.rules,'react-refresh/only-export-components':['warn',{allowConstantExport:true}]}}
   ,{files:['functions/scripts/**/*.mjs'],languageOptions:{globals:globals.node}}
+  ,{files:['public/_worker.js'],languageOptions:{globals:globals.serviceworker}}
 );
