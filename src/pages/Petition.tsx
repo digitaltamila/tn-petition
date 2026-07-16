@@ -75,6 +75,13 @@ type MlaDirectory = {
     photoUrl: string;
   }>;
 };
+const mandatoryCcRecipients = [
+  {
+    department: "Tamil Nadu Uniformed Services Recruitment Board",
+    email: "tnusrb@nic.in",
+  },
+  { department: "Chief Minister's Helpline", email: "cmhelpline@tn.gov.in" },
+] as const;
 function mlaRecipientId(email: string) {
   return `mla_${email.split("@")[0].replace(/^mla/, "")}`;
 }
@@ -1072,6 +1079,25 @@ function RecipientSelect({
 }) {
   return (
     <div className="space-y-3">
+      <aside className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+        <p className="font-bold">
+          {localized(lang, "Official CC copies", "அதிகாரப்பூர்வ CC பிரதிகள்")}
+        </p>
+        <p className="mt-1 text-blue-800">
+          {localized(
+            lang,
+            "These recipients are included automatically with every petition.",
+            "இந்தப் பெறுநர்கள் ஒவ்வொரு மனுவிலும் தானாகச் சேர்க்கப்படுவர்.",
+          )}
+        </p>
+        <ul className="mt-3 space-y-1">
+          {mandatoryCcRecipients.map((recipient) => (
+            <li key={recipient.email} className="break-all">
+              <span className="font-semibold">{recipient.department}</span> (CC) · {recipient.email}
+            </li>
+          ))}
+        </ul>
+      </aside>
       {loading ? (
         <p className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-900" role="status">
           {localized(
