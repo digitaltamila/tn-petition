@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import type { z } from "zod";
 import type { studentSchema } from "./schema.js";
@@ -25,7 +26,11 @@ export async function makePdf(
     }),
     chunks: Buffer[] = [];
   doc.on("data", (x) => chunks.push(x));
-  const font = path.resolve(process.cwd(), "assets/NotoSansTamil.ttf");
+  const font = [
+    path.resolve(process.cwd(), "assets/NotoSansTamil.ttf"),
+    path.resolve(process.cwd(), "functions/assets/NotoSansTamil.ttf"),
+  ].find(existsSync);
+  if (!font) throw new Error("Tamil PDF font is unavailable.");
   doc.registerFont("Tamil", font).font("Tamil").fontSize(10);
   doc
     .fillColor("#102a43")
@@ -77,15 +82,20 @@ export async function makePdf(
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
+    const bottomMargin = doc.page.margins.bottom;
+    // PDFKit otherwise treats footer text inside the reserved margin as
+    // overflow and appends a blank page for every buffered content page.
+    doc.page.margins.bottom = 0;
     doc
       .fontSize(8)
       .fillColor("#52606d")
       .text(
         `${reference}  •  Page ${i + 1}  •  Generated ${generated}`,
         55,
-        790,
+        doc.page.height - 35,
         { width: 485, align: "center", lineBreak: false },
       );
+    doc.page.margins.bottom = bottomMargin;
   }
   doc.end();
   await new Promise<void>((resolve, reject) => {
