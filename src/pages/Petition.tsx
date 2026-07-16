@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { firebaseConfigured, functions } from "../firebase";
+import { auth, firebaseConfigured, functions } from "../firebase";
 import { SignaturePad } from "../components/SignaturePad";
 import { Modal } from "../components/Modal";
 import type { Draft, Lang, Mla, Prepared, Recipient, Student } from "../types";
@@ -367,6 +368,17 @@ export function Petition({ lang }: { lang: Lang }) {
     setGmailBusy(true);
     try {
       const authorization = await authorizeGmailAccount();
+      const credential = GoogleAuthProvider.credential(
+        null,
+        authorization.accessToken,
+      );
+      const signedIn = await signInWithCredential(auth, credential);
+      const firebaseEmail = signedIn.user.email?.toLowerCase();
+      if (!firebaseEmail || firebaseEmail !== authorization.email) {
+        throw new Error(
+          "The Firebase sign-in account does not match the authorized Gmail account.",
+        );
+      }
       setGmailAuthorization(authorization);
       setStudent((current) => ({ ...current, email: authorization.email }));
       setShowErrors(false);

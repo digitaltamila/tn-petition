@@ -122,10 +122,23 @@ export const lookupPin = onCall(
   },
 );
 export const preparePetition = onCall(
-  { region, enforceAppCheck: true, secrets: [payloadKey], memory: "512MiB" },
+  { region, enforceAppCheck: false, secrets: [payloadKey], memory: "512MiB" },
   async (req) => {
+    if (!req.auth)
+      throw new HttpsError(
+        "unauthenticated",
+        "Authorize your Gmail account before preparing the petition.",
+      );
     await rateLimit(req.rawRequest.ip || "unknown", "prepare", 10);
     const draft = parse(draftSchema, req.data);
+    if (
+      !req.auth.token.email ||
+      req.auth.token.email.toLowerCase() !== draft.student.email.toLowerCase()
+    )
+      throw new HttpsError(
+        "permission-denied",
+        "The authorized Gmail account must match the petition email.",
+      );
     const campaign = await db.doc(`campaigns/${campaignId}`).get();
     if (campaign.exists && campaign.data()?.enabled === false)
       throw new HttpsError(
@@ -192,7 +205,7 @@ export const preparePetition = onCall(
 export const sendPetition = onCall(
   {
     region,
-    enforceAppCheck: true,
+    enforceAppCheck: false,
     secrets: [payloadKey],
     memory: "512MiB",
     timeoutSeconds: 60,
