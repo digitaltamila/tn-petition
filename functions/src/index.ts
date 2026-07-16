@@ -493,7 +493,7 @@ async function generateAttachments(
   }
   return groups;
 }
-function mime(
+export function mime(
   sender: string,
   rs: Recipient[],
   sub: string,
@@ -528,5 +528,5 @@ function mime(
       a.pdf.toString("base64"),
     );
   lines.push(`--${boundary}--`);
-  return Buffer.from(lines.filter(Boolean).join("\r\n")).toString("base64url");
+  return Buffer.from(lines.join("\r\n")).toString("base64url");
 }
