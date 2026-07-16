@@ -29,6 +29,28 @@ type Recipient = {
   lastVerifiedDate?: string;
   sourceUrl?: string;
 };
+const mandatoryCcRecipients: Recipient[] = [
+  {
+    id: "mandatory-cc-tnusrb",
+    departmentName: "Tamil Nadu Uniformed Services Recruitment Board",
+    email: "tnusrb@nic.in",
+    recipientType: "cc_copy",
+    delivery: "cc",
+    active: true,
+    verificationStatus: "verified",
+    sourceUrl: "https://www.tnusrb.tn.gov.in/",
+  },
+  {
+    id: "mandatory-cc-cm-helpline",
+    departmentName: "Chief Minister's Helpline",
+    email: "cmhelpline@tn.gov.in",
+    recipientType: "cc_copy",
+    delivery: "cc",
+    active: true,
+    verificationStatus: "verified",
+    sourceUrl: "https://cmhelpline.tnega.tn.gov.in/",
+  },
+];
 type Sealed = {
   draft: ReturnType<typeof draftSchema.parse>;
   reference: string;
@@ -167,14 +189,15 @@ export const preparePetition = onCall(
         "invalid-argument",
         "Assembly constituency is required when an MLA recipient is selected.",
       );
-    const reference = await nextReference(),
+    const deliveryRecipients = withMandatoryCc(recipients),
+      reference = await nextReference(),
       generated = new Date().toISOString(),
       attachments = await generateAttachments(
         draft.student,
         draft.signature,
         reference,
         generated,
-        recipients,
+        deliveryRecipients,
       ),
       emailBody = body(draft.student, reference, generated);
     return {
@@ -187,14 +210,14 @@ export const preparePetition = onCall(
       })),
       emailSubject: subject,
       emailBody,
-      recipients,
+      recipients: deliveryRecipients,
       expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
       sealed: seal(
         {
           draft,
           reference,
           generated,
-          recipients,
+          recipients: deliveryRecipients,
           expires: Date.now() + 15 * 60_000,
         },
         payloadKey.value(),
@@ -283,16 +306,17 @@ export const sendPetition = onCall(
         "already-exists",
         "This petition has already been sent.",
       );
+    const deliveryRecipients = withMandatoryCc(payload.recipients);
     const attachments = await generateAttachments(
       payload.draft.student,
       payload.draft.signature,
       payload.reference,
       payload.generated,
-      payload.recipients,
+      deliveryRecipients,
     );
     const raw = mime(
       sender,
-      payload.recipients,
+      deliveryRecipients,
       subject,
       body(payload.draft.student, payload.reference, payload.generated),
       attachments,
@@ -308,7 +332,7 @@ export const sendPetition = onCall(
         submissionTimestamp: FieldValue.serverTimestamp(),
         sendStatus: "processing",
         gmailSendStatus: "processing",
-        recipientDepartmentNames: payload.recipients.map(
+        recipientDepartmentNames: deliveryRecipients.map(
           (r) => r.departmentName,
         ),
         consentVersion: payload.draft.consentVersion,
@@ -333,7 +357,7 @@ export const sendPetition = onCall(
         reference: payload.reference,
         sentAt,
         sender,
-        departments: payload.recipients.map((r) => r.departmentName),
+        departments: deliveryRecipients.map((r) => r.departmentName),
       };
     } catch {
       await petitionRef.update({
@@ -384,6 +408,17 @@ function mask(x: string) {
   const [a, b] = x.split("@");
   return `${a.slice(0, 2)}***@${b}`;
 }
+function withMandatoryCc(recipients: Recipient[]) {
+  const existingEmails = new Set(
+    recipients.map((recipient) => recipient.email.toLowerCase()),
+  );
+  return [
+    ...recipients,
+    ...mandatoryCcRecipients.filter(
+      (recipient) => !existingEmails.has(recipient.email.toLowerCase()),
+    ),
+  ];
+}
 async function rateLimit(ip: string, kind: string, max: number) {
   const bucket = Math.floor(Date.now() / 3600000),
     id = hash(`${process.env.GCLOUD_PROJECT}:${ip}:${kind}:${bucket}`),
@@ -420,7 +455,9 @@ async function generateAttachments(
   recipients: Recipient[],
 ) {
   const groups: Attachment[] = [];
-  const government = recipients.filter((r) => r.recipientType !== "mla");
+  const government = recipients.filter(
+    (r) => r.recipientType !== "mla" && r.recipientType !== "cc_copy",
+  );
   if (government.length) {
     const departmentName = government.map((r) => r.departmentName).join(", "),
       fileName = `TN_Police_Petition_Government_${safe(s.name)}_${generated.slice(0, 10)}.pdf`;
