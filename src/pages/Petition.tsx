@@ -167,6 +167,7 @@ export function Petition({ lang }: { lang: Lang }) {
       sentAt: string;
       sender: string;
       departments: string[];
+      gmailMessageId?: string | null;
       attachments: Prepared["attachments"];
     }>();
   useEffect(() => {
@@ -420,6 +421,7 @@ export function Petition({ lang }: { lang: Lang }) {
           sentAt: string;
           sender: string;
           departments: string[];
+          gmailMessageId?: string | null;
         }
       >(
         functions,
@@ -1203,6 +1205,7 @@ function Success({
     sentAt: string;
     sender: string;
     departments: string[];
+    gmailMessageId?: string | null;
     attachments: Prepared["attachments"];
   };
 }) {
@@ -1212,7 +1215,7 @@ function Success({
       <h1 className="mt-4 text-2xl font-bold text-green sm:text-3xl">
         {localized(
           lang,
-          "Petition sent successfully",
+          "Sent via Gmail",
           "மனு வெற்றிகரமாக அனுப்பப்பட்டது",
         )}
       </h1>
@@ -1221,7 +1224,28 @@ function Success({
         {new Date(data.sentAt).toLocaleString()} · {data.sender}
       </p>
       <p className="mt-3">{data.departments.join(", ")}</p>
+      <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left text-sm leading-6 text-emerald-950">
+        <p className="font-bold">Gmail accepted this message for sending.</p>
+        <p className="mt-1">
+          This proves sending, not that a recipient opened it. Check Gmail for bounce notices; an official reply or acknowledgement confirms receipt.
+        </p>
+        {data.gmailMessageId && (
+          <p className="mt-2 break-all text-xs text-emerald-900">
+            Gmail message ID: {data.gmailMessageId}
+          </p>
+        )}
+      </div>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
+        {data.gmailMessageId && (
+          <a
+            className="btn-secondary"
+            href={`https://mail.google.com/mail/u/0/#sent/${data.gmailMessageId}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open in Gmail Sent
+          </a>
+        )}
         {data.attachments.map((attachment) => (
           <button
             key={attachment.fileName}

@@ -36,6 +36,7 @@ type Submission = {
   campaignId: string;
   sendStatus: "success" | "failed" | "processing";
   gmailSendStatus?: string;
+  gmailMessageId?: string | null;
   recipientDepartmentNames: string[];
   submissionTimestamp?: unknown;
   sentAt?: string;
@@ -254,6 +255,7 @@ export function Admin() {
         "District",
         "Recipients",
         "Status",
+        "Gmail message ID",
         "Submitted at",
       ],
       ...filtered.map((item) => [
@@ -262,7 +264,8 @@ export function Admin() {
         item.emailMasked,
         item.district,
         (item.recipientDepartmentNames || []).join("; "),
-        item.sendStatus,
+        item.sendStatus === "success" ? "Sent via Gmail" : item.sendStatus,
+        item.gmailMessageId || "",
         submissionDate(item)?.toISOString() || "",
       ]),
     ];
@@ -352,7 +355,7 @@ export function Admin() {
       <section className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
           ["Total records", counts.total, "text-navy"],
-          ["Successfully sent", counts.success, "text-emerald-700"],
+          ["Sent via Gmail", counts.success, "text-emerald-700"],
           ["Sent today", todayCount, "text-blue-700"],
           ["Failed", counts.failed, "text-red-700"],
           ["Processing", counts.processing, "text-amber-700"],
@@ -463,8 +466,15 @@ export function Admin() {
                                 : "bg-amber-100 text-amber-800"
                           }`}
                         >
-                          {item.sendStatus}
+                          {item.sendStatus === "success"
+                            ? "Sent via Gmail"
+                            : item.sendStatus}
                         </span>
+                        {item.gmailMessageId && (
+                          <p className="mt-2 max-w-40 break-all text-[11px] text-slate-500">
+                            Gmail ID: {item.gmailMessageId}
+                          </p>
+                        )}
                       </td>
                     </tr>
                   );
