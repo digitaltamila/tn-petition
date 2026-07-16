@@ -344,20 +344,25 @@ export const sendPetition = onCall(
       { merge: true },
     );
     try {
-      await google
+      const gmailMessage = await google
         .gmail({ version: "v1", auth: oauth })
         .users.messages.send({ userId: "me", requestBody: { raw } });
-      const sentAt = new Date().toISOString();
+      const sentAt = new Date().toISOString(),
+        gmailMessageId = gmailMessage.data.id || null,
+        gmailThreadId = gmailMessage.data.threadId || null;
       await petitionRef.update({
         sendStatus: "success",
         gmailSendStatus: "success",
         sentAt,
+        gmailMessageId,
+        gmailThreadId,
       });
       return {
         reference: payload.reference,
         sentAt,
         sender,
         departments: deliveryRecipients.map((r) => r.departmentName),
+        gmailMessageId,
       };
     } catch {
       await petitionRef.update({
