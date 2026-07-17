@@ -6,8 +6,8 @@ const copy = {
     privacy: [
       "Privacy policy",
       [
-        "We collect only the applicant information needed to prepare and send the requested petition. The signature, full address, temporary PDF and Gmail access token are not retained after submission.",
-        "Gmail permission is limited to sending this specific reviewed email. We do not read inbox messages.",
+        "We collect only the applicant information needed to prepare the requested petition. The signature, full address and temporary PDF are not retained after the petition is prepared.",
+        "We do not request access to Gmail. The applicant downloads the PDF, attaches it and sends the prepared email from their own email app.",
       ],
     ],
     terms: [
@@ -32,7 +32,7 @@ const copy = {
     deletion: [
       "Data deletion request",
       [
-        "Contact the configured privacy address with your petition reference and authenticated Gmail address. Eligible records will be removed after identity verification.",
+        "Contact the configured privacy address with your petition reference and email address. Eligible records will be removed after identity verification.",
       ],
     ],
     contact: [
@@ -46,8 +46,8 @@ const copy = {
     privacy: [
       "தனியுரிமைக் கொள்கை",
       [
-        "கோரப்பட்ட மனுவைத் தயாரித்து அனுப்பத் தேவையான தகவல்கள் மட்டுமே சேகரிக்கப்படும். கையொப்பம், முழு முகவரி, தற்காலிக PDF மற்றும் Gmail அணுகல் குறியீடு சமர்ப்பித்த பிறகு சேமிக்கப்படாது.",
-        "ஆய்வு செய்யப்பட்ட இந்த குறிப்பிட்ட மின்னஞ்சலை அனுப்புவதற்கு மட்டுமே Gmail அனுமதி பயன்படுத்தப்படும். உங்கள் மின்னஞ்சல் பெட்டி வாசிக்கப்படாது.",
+        "கோரப்பட்ட மனுவைத் தயாரிக்கத் தேவையான தகவல்கள் மட்டுமே சேகரிக்கப்படும். கையொப்பம், முழு முகவரி மற்றும் தற்காலிக PDF மனு தயாரிக்கப்பட்ட பிறகு சேமிக்கப்படாது.",
+        "Gmail அணுகலை நாங்கள் கோரமாட்டோம். விண்ணப்பதாரர் PDF-ஐ பதிவிறக்கி, இணைத்து, தங்கள் மின்னஞ்சல் செயலியில் தயாரான மின்னஞ்சலை அனுப்புவார்.",
       ],
     ],
     terms: [
@@ -72,7 +72,7 @@ const copy = {
     deletion: [
       "தரவு நீக்கக் கோரிக்கை",
       [
-        "மனு எண்ணையும் சரிபார்க்கப்பட்ட Gmail முகவரியையும் குறிப்பிட்டு தனியுரிமை தொடர்பு முகவரியை அணுகவும். அடையாளச் சரிபார்ப்புக்குப் பிறகு தகுதியான பதிவுகள் நீக்கப்படும்.",
+        "மனு எண்ணையும் மின்னஞ்சல் முகவரியையும் குறிப்பிட்டு தனியுரிமை தொடர்பு முகவரியை அணுகவும். அடையாளச் சரிபார்ப்புக்குப் பிறகு தகுதியான பதிவுகள் நீக்கப்படும்.",
       ],
     ],
     contact: [

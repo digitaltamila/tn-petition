@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { auth, firebaseConfigured, functions } from "../firebase";
+import { firebaseConfigured, functions } from "../firebase";
 import { SignaturePad } from "../components/SignaturePad";
-import { Modal } from "../components/Modal";
 import type { Draft, Lang, Mla, Prepared, Recipient, Student } from "../types";
 import { localized, t } from "../i18n";
-import { authorizeGmailAccount, loadGoogleIdentity } from "../googleOAuth";
+import { emailDraftUrl } from "../emailDraft";
 const blank: Student = {
   name: "",
   email: "",
@@ -26,13 +24,13 @@ const consentText = {
   en: [
     "I confirm that the information I entered is accurate.",
     "I authorise this application to generate this petition using my details and signature.",
-    "I authorise this application to send this specific email from my Gmail account only after I review and approve it.",
+    "I understand that this website will prepare the PDF and email draft. I will attach the PDF and send the email myself.",
     "I understand that this application is not affiliated with the Tamil Nadu Government.",
   ],
   ta: [
     "நான் உள்ளிட்ட தகவல்கள் சரியானவை என்பதை உறுதிப்படுத்துகிறேன்.",
     "எனது விவரங்கள் மற்றும் கையொப்பத்தைப் பயன்படுத்தி இந்த மனுவை உருவாக்க அனுமதிக்கிறேன்.",
-    "நான் ஆய்வு செய்து ஒப்புதல் அளித்த பிறகு மட்டுமே, இந்த குறிப்பிட்ட மின்னஞ்சலை எனது Gmail கணக்கிலிருந்து அனுப்ப அனுமதிக்கிறேன்.",
+    "இந்த இணையதளம் PDF மற்றும் மின்னஞ்சல் வரைவைத் தயாரிக்கும் என்பதை நான் புரிந்துகொள்கிறேன். PDF-ஐ இணைத்து மின்னஞ்சலை நானே அனுப்புவேன்.",
     "இந்தச் செயலி தமிழ்நாடு அரசுடன் இணைக்கப்படவில்லை என்பதைப் புரிந்துகொள்கிறேன்.",
   ],
 };
@@ -51,7 +49,7 @@ const stepHelp = {
     "Read and approve each statement before continuing.",
     "Check your personalised petition carefully.",
     "Confirm the verified authorities who will receive your petition.",
-    "Review the exact email and attachments before signing in.",
+    "Review the email and attachments, then open your own email draft.",
   ],
   ta: [
     "உங்கள் விவரங்களையும் விண்ணப்பித்த தேர்வையும் உள்ளிடவும்.",
@@ -63,7 +61,6 @@ const stepHelp = {
   ],
 } as const;
 type PostalResult = { localities: string[]; district: string; state: string };
-type GmailAuthorization = { accessToken: string; email: string };
 type MlaDirectory = {
   sourceUrl: string;
   verifiedAt: string;
@@ -155,24 +152,10 @@ export function Petition({ lang }: { lang: Lang }) {
     [recipientsLoading, setRecipientsLoading] = useState(false),
     [selected, setSelected] = useState<string[]>([]),
     [prepared, setPrepared] = useState<Prepared>(),
-    [gmailAuthorization, setGmailAuthorization] =
-      useState<GmailAuthorization>(),
-    [gmailBusy, setGmailBusy] = useState(false),
     [error, setError] = useState(""),
     [showErrors, setShowErrors] = useState(false),
     [busy, setBusy] = useState(false),
-    [modal, setModal] = useState(false),
-    [success, setSuccess] = useState<{
-      reference: string;
-      sentAt: string;
-      sender: string;
-      departments: string[];
-      gmailMessageId?: string | null;
-      attachments: Prepared["attachments"];
-    }>();
-  useEffect(() => {
-    void loadGoogleIdentity().catch(() => undefined);
-  }, []);
+    [draftOpened, setDraftOpened] = useState<Prepared>();
   useEffect(() => {
     if (step !== 4) return;
     let cancelled = false;
@@ -296,16 +279,6 @@ export function Petition({ lang }: { lang: Lang }) {
       );
       return;
     }
-    if (step === 0 && !gmailAuthorization) {
-      setError(
-        localized(
-          lang,
-          "Authorize the Gmail address before continuing.",
-          "தொடர்வதற்கு முன் Gmail முகவரியை அங்கீகரிக்கவும்.",
-        ),
-      );
-      return;
-    }
     if (step === 0) setShowErrors(false);
     if (step === 1 && !signature) {
       setError(
@@ -371,80 +344,18 @@ export function Petition({ lang }: { lang: Lang }) {
       setBusy(false);
     }
   };
-  const authorizeGmail = async () => {
-    setError("");
-    setGmailBusy(true);
-    try {
-      const authorization = await authorizeGmailAccount();
-      const credential = GoogleAuthProvider.credential(
-        null,
-        authorization.accessToken,
-      );
-      const signedIn = await signInWithCredential(auth, credential);
-      const firebaseEmail = signedIn.user.email?.toLowerCase();
-      if (!firebaseEmail || firebaseEmail !== authorization.email) {
-        throw new Error(
-          "The Firebase sign-in account does not match the authorized Gmail account.",
-        );
-      }
-      setGmailAuthorization(authorization);
-      setStudent((current) => ({ ...current, email: authorization.email }));
-      setShowErrors(false);
-    } catch (authorizationError) {
-      setGmailAuthorization(undefined);
-      setError(message(authorizationError));
-    } finally {
-      setGmailBusy(false);
-    }
+  const openEmailDraft = (service: "gmail" | "default") => {
+    if (!prepared) return;
+    prepared.attachments.forEach((attachment) =>
+      downloadPdf(attachment.pdfBase64, attachment.fileName),
+    );
+    const url = emailDraftUrl(prepared, service);
+    if (service === "gmail") window.open(url, "_blank", "noopener,noreferrer");
+    else window.location.assign(url);
+    setDraftOpened(prepared);
   };
-  const send = async () => {
-    setBusy(true);
-    setError("");
-    try {
-      if (
-        !gmailAuthorization ||
-        gmailAuthorization.email !== student.email.toLowerCase()
-      ) {
-        throw new Error(
-          "Authorize the Gmail address in Step 1 before sending the petition.",
-        );
-      }
-      const r = await httpsCallable<
-        {
-          gmailAccessToken: string;
-          reference: string;
-          idempotencyKey: string;
-          sealed: string;
-        },
-        {
-          reference: string;
-          sentAt: string;
-          sender: string;
-          departments: string[];
-          gmailMessageId?: string | null;
-        }
-      >(
-        functions,
-        "sendPetition",
-      )({
-        gmailAccessToken: gmailAuthorization.accessToken,
-        reference: prepared!.reference,
-        idempotencyKey: prepared!.reference,
-        sealed: prepared!.sealed,
-      });
-      setSuccess({
-        ...r.data,
-        attachments: prepared!.attachments,
-      });
-      setModal(false);
-    } catch (e) {
-      setError(message(e));
-      setModal(false);
-    } finally {
-      setBusy(false);
-    }
-  };
-  if (success) return <Success lang={lang} data={success} />;
+  if (draftOpened)
+    return <DraftReady lang={lang} prepared={draftOpened} onOpen={openEmailDraft} />;
   return (
     <div className="mx-auto max-w-5xl px-3 py-6 pb-28 sm:px-4 md:py-10">
       <div className="mb-4 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -503,9 +414,6 @@ export function Petition({ lang }: { lang: Lang }) {
             value={student}
             set={setStudent}
             errors={showErrors ? errors : {}}
-            gmailAuthorization={gmailAuthorization}
-            authorizeGmail={authorizeGmail}
-            gmailBusy={gmailBusy}
           />
         )}{" "}
         {step === 1 && (
@@ -559,7 +467,7 @@ export function Petition({ lang }: { lang: Lang }) {
           {step > 0 && (
             <button
               className="btn-secondary"
-              disabled={busy || gmailBusy}
+              disabled={busy}
               onClick={() => setStep((s) => s - 1)}
             >
               {t(lang, "back")}
@@ -567,28 +475,21 @@ export function Petition({ lang }: { lang: Lang }) {
           )}
           <button
             className="btn-primary ml-auto"
-            disabled={busy || gmailBusy}
-            onClick={step === 5 ? () => setModal(true) : next}
+            disabled={busy}
+            onClick={step === 5 ? () => openEmailDraft("gmail") : next}
           >
             {busy
               ? localized(lang, "Please wait…", "காத்திருக்கவும்…")
               : step === 5
                 ? localized(
                     lang,
-                    "Review and send petition",
-                    "ஆய்வு செய்து மனுவை அனுப்பவும்",
+                    "Download PDFs & open Gmail draft",
+                    "PDF-களைப் பதிவிறக்கி Gmail வரைவைத் திறக்கவும்",
                   )
                 : t(lang, "continue")}
           </button>
         </div>
       </section>
-      <Modal
-        lang={lang}
-        open={modal}
-        onClose={() => setModal(false)}
-        onConfirm={send}
-        busy={busy}
-      />
     </div>
   );
 }
@@ -597,17 +498,11 @@ function Details({
   value,
   set,
   errors,
-  gmailAuthorization,
-  authorizeGmail,
-  gmailBusy,
 }: {
   lang: Lang;
   value: Student;
   set: (s: Student) => void;
   errors: Record<string, string>;
-  gmailAuthorization?: GmailAuthorization;
-  authorizeGmail: () => Promise<void>;
-  gmailBusy: boolean;
 }) {
   const [mlas, setMlas] = useState<Mla[]>([]),
     [mlaStatus, setMlaStatus] = useState<"loading" | "ready" | "error">(
@@ -702,7 +597,7 @@ function Details({
     : [];
   const fields: [keyof Student, string, string?][] = [
     ["name", localized(lang, "Full name", "முழுப் பெயர்")],
-    ["email", localized(lang, "Gmail address", "Gmail முகவரி"), "email"],
+    ["email", localized(lang, "Email address", "மின்னஞ்சல் முகவரி"), "email"],
     ["mobile", localized(lang, "Mobile number", "கைப்பேசி எண்"), "tel"],
     [
       "address",
@@ -773,12 +668,11 @@ function Details({
                 k === "email"
                   ? localized(
                       lang,
-                      "Selected automatically from Google",
-                      "Google கணக்கிலிருந்து தானாகத் தேர்ந்தெடுக்கப்படும்",
+                      "you@example.com",
+                      "you@example.com",
                     )
                   : undefined
               }
-              readOnly={k === "email"}
               onChange={(e) => set({ ...value, [k]: e.target.value })}
               maxLength={k === "address" ? 300 : 100}
               aria-invalid={!!errors[k]}
@@ -788,51 +682,6 @@ function Details({
           {errors[k] && (
             <span id={`${k}-error`} className="mt-1 block text-sm text-red-700">
               {errors[k]}
-            </span>
-          )}
-          {k === "email" && (
-            <span className="mt-2 block rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <button
-                type="button"
-                className={
-                  gmailAuthorization
-                    ? "inline-flex min-h-10 items-center rounded-lg bg-emerald-100 px-3 py-2 text-sm font-bold text-emerald-800"
-                    : "btn-secondary min-h-10 text-sm"
-                }
-                disabled={gmailBusy}
-                onClick={() => void authorizeGmail()}
-              >
-                {gmailBusy
-                  ? localized(
-                      lang,
-                      "Opening Google…",
-                      "Google திறக்கப்படுகிறது…",
-                    )
-                  : gmailAuthorization
-                    ? localized(
-                        lang,
-                        "Change Gmail account",
-                        "Gmail கணக்கை மாற்றவும்",
-                      )
-                    : localized(
-                        lang,
-                        "Connect Gmail securely",
-                        "Gmail கணக்கைப் பாதுகாப்பாக இணைக்கவும்",
-                      )}
-              </button>
-              <small className="mt-2 block leading-5 text-slate-500">
-                {gmailAuthorization
-                  ? localized(
-                      lang,
-                      `Authorized as ${gmailAuthorization.email}.`,
-                      `${gmailAuthorization.email} கணக்காக அங்கீகரிக்கப்பட்டது.`,
-                    )
-                  : localized(
-                      lang,
-                      "Google will provide your Gmail address automatically. Permission is limited to sending this reviewed petition; inbox access is not requested.",
-                      "உங்கள் Gmail முகவரியை Google தானாக வழங்கும். இந்த மனுவை அனுப்ப மட்டும் அனுமதி கோரப்படும்; Inbox அணுகல் கோரப்படாது.",
-                    )}
-              </small>
             </span>
           )}
         </label>
@@ -1195,58 +1044,40 @@ function EmailReview({ lang, prepared }: { lang: Lang; prepared: Prepared }) {
     </div>
   );
 }
-function Success({
+function DraftReady({
   lang,
-  data,
+  prepared,
+  onOpen,
 }: {
   lang: Lang;
-  data: {
-    reference: string;
-    sentAt: string;
-    sender: string;
-    departments: string[];
-    gmailMessageId?: string | null;
-    attachments: Prepared["attachments"];
-  };
+  prepared: Prepared;
+  onOpen: (service: "gmail" | "default") => void;
 }) {
   return (
     <div className="card mx-auto my-12 max-w-2xl text-center">
-      <div className="text-5xl">✓</div>
+      <div className="text-5xl">✉</div>
       <h1 className="mt-4 text-2xl font-bold text-green sm:text-3xl">
         {localized(
           lang,
-          "Sent via Gmail",
-          "மனு வெற்றிகரமாக அனுப்பப்பட்டது",
+          "Your email draft is ready",
+          "உங்கள் மின்னஞ்சல் வரைவு தயாராக உள்ளது",
         )}
       </h1>
-      <p className="mt-5 text-xl font-bold">{data.reference}</p>
-      <p>
-        {new Date(data.sentAt).toLocaleString()} · {data.sender}
-      </p>
-      <p className="mt-3">{data.departments.join(", ")}</p>
+      <p className="mt-5 text-xl font-bold">{prepared.reference}</p>
       <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left text-sm leading-6 text-emerald-950">
-        <p className="font-bold">Gmail accepted this message for sending.</p>
+        <p className="font-bold">Attach the downloaded PDF, then press Send yourself.</p>
         <p className="mt-1">
-          This proves sending, not that a recipient opened it. Check Gmail for bounce notices; an official reply or acknowledgement confirms receipt.
+          No Google account permission was requested. The site cannot confirm delivery because the final sending happens in your own email app.
         </p>
-        {data.gmailMessageId && (
-          <p className="mt-2 break-all text-xs text-emerald-900">
-            Gmail message ID: {data.gmailMessageId}
-          </p>
-        )}
       </div>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
-        {data.gmailMessageId && (
-          <a
-            className="btn-secondary"
-            href={`https://mail.google.com/mail/u/0/#sent/${data.gmailMessageId}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open in Gmail Sent
-          </a>
-        )}
-        {data.attachments.map((attachment) => (
+        <button className="btn-primary" onClick={() => onOpen("gmail")}>
+          Download PDFs & open Gmail
+        </button>
+        <button className="btn-secondary" onClick={() => onOpen("default")}>
+          Open default email app
+        </button>
+        {prepared.attachments.map((attachment) => (
           <button
             key={attachment.fileName}
             className="btn-secondary"
@@ -1262,7 +1093,7 @@ function Success({
           </button>
         ))}
         <button className="btn-primary" onClick={() => window.print()}>
-          {localized(lang, "Print acknowledgement", "ஒப்புகையை அச்சிடவும்")}
+          {localized(lang, "Print petition record", "மனு பதிவை அச்சிடவும்")}
         </button>
       </div>
     </div>

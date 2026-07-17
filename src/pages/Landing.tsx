@@ -125,8 +125,8 @@ export function Landing({ lang }: { lang: Lang }) {
               <p className="mt-4 leading-7 text-slate-600">
                 {localized(
                   lang,
-                  "After the applicant reviews the petition, they may connect their own Google account. The application requests basic account identity and the Gmail send-only permission solely to send that one reviewed petition from the applicant’s account after final confirmation. It does not read inbox messages, drafts, contacts or Gmail settings, and the temporary access token is not retained after submission.",
-                  "மனுவை ஆய்வு செய்த பிறகு விண்ணப்பதாரர் தமது Google கணக்கை இணைக்கலாம். இறுதி உறுதிப்படுத்தலுக்குப் பிறகு, ஆய்வு செய்யப்பட்ட அந்த ஒரு மனுவை விண்ணப்பதாரரின் கணக்கிலிருந்து அனுப்புவதற்காக மட்டுமே அடிப்படை கணக்கு அடையாளம் மற்றும் Gmail அனுப்பும் அனுமதி கோரப்படுகிறது. Inbox செய்திகள், drafts, contacts அல்லது Gmail settings வாசிக்கப்படாது; தற்காலிக access token சமர்ப்பித்த பிறகு சேமிக்கப்படாது.",
+                  "After reviewing the petition, the applicant downloads the PDF and opens a pre-filled email draft. The applicant attaches the PDF and presses Send from their own email app. This website does not request access to Gmail, inbox messages, drafts, contacts or settings.",
+                  "மனுவை ஆய்வு செய்த பிறகு விண்ணப்பதாரர் PDF-ஐப் பதிவிறக்கி, முன்பூர்த்தி செய்யப்பட்ட மின்னஞ்சல் வரைவைத் திறப்பார். PDF-ஐ இணைத்து தங்கள் சொந்த மின்னஞ்சல் செயலியில் அனுப்பு என்பதை அழுத்துவார். இந்த இணையதளம் Gmail, inbox செய்திகள், drafts, contacts அல்லது settings-க்கான அணுகலை கோராது.",
                 )}
               </p>
             </article>
