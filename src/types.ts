@@ -43,6 +43,13 @@ export type Draft = {
   recipientIds: string[];
   idempotencyKey: string;
 };
+export type ResumeProgress = {
+  student: Student;
+  signature: string;
+  consents: boolean[];
+  selected: string[];
+  step: number;
+};
 export type PetitionAttachment = {
   kind: "government" | "mla";
   departmentName: string;

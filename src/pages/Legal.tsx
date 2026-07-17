@@ -6,7 +6,7 @@ const copy = {
     privacy: [
       "Privacy policy",
       [
-        "We collect only the applicant information needed to prepare the requested petition. The signature, full address and temporary PDF are not retained after the petition is prepared.",
+        "We collect only the applicant information needed to prepare the requested petition. If the applicant chooses Save and continue later, the form details and signature are protected by email-link sign-in and can be resumed for up to 30 days. Temporary PDFs are not retained after the petition is prepared.",
         "We do not request access to Gmail. The applicant downloads the PDF, attaches it and sends the prepared email from their own email app.",
       ],
     ],

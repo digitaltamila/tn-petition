@@ -5,7 +5,12 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { defineSecret, defineString } from "firebase-functions/params";
 import { google } from "googleapis";
 import crypto from "node:crypto";
-import { draftSchema, sendSchema } from "./schema.js";
+import {
+  draftSchema,
+  getResumeSchema,
+  saveResumeSchema,
+  sendSchema,
+} from "./schema.js";
 import { makePdf } from "./pdf.js";
 import { seal, unseal } from "./crypto.js";
 initializeApp();
@@ -210,6 +215,49 @@ export const preparePetition = onCall(
         payloadKey.value(),
       ),
     };
+  },
+);
+export const saveResume = onCall(
+  { region, enforceAppCheck: false },
+  async (req) => {
+    await rateLimit(req.rawRequest.ip || "unknown", "save-resume", 10);
+    const input = parse(saveResumeSchema, req.data);
+    if (input.progress.student.email !== input.email)
+      throw new HttpsError(
+        "invalid-argument",
+        "The resume email must match the form email.",
+      );
+    const now = Date.now();
+    await db.doc(`petitionResumes/${hash(input.resumeToken)}`).set({
+      emailHash: hash(input.email),
+      progress: input.progress,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      expiresAt: new Date(now + 30 * 24 * 60 * 60_000),
+    });
+    return { expiresAt: new Date(now + 30 * 24 * 60 * 60_000).toISOString() };
+  },
+);
+export const getResume = onCall(
+  { region, enforceAppCheck: false },
+  async (req) => {
+    if (!req.auth?.token.email)
+      throw new HttpsError("unauthenticated", "Open the one-time email link first.");
+    const input = parse(getResumeSchema, req.data);
+    const ref = db.doc(`petitionResumes/${hash(input.resumeToken)}`),
+      saved = await ref.get();
+    if (!saved.exists || saved.data()?.expiresAt?.toDate?.().getTime() < Date.now())
+      throw new HttpsError(
+        "not-found",
+        "This saved petition has expired. Please start a new petition.",
+      );
+    if (saved.data()?.emailHash !== hash(req.auth.token.email.toLowerCase()))
+      throw new HttpsError(
+        "permission-denied",
+        "Open the email link using the address that saved this petition.",
+      );
+    const progress = saved.data()?.progress;
+    return { progress, expiresAt: saved.data()?.expiresAt?.toDate?.().toISOString() };
   },
 );
 export const sendPetition = onCall(

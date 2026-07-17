@@ -1,10 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { httpsCallable } from "firebase/functions";
-import { firebaseConfigured, functions } from "../firebase";
+import { auth, firebaseConfigured, functions } from "../firebase";
 import { SignaturePad } from "../components/SignaturePad";
-import type { Draft, Lang, Mla, Prepared, Recipient, Student } from "../types";
+import type {
+  Draft,
+  Lang,
+  Mla,
+  Prepared,
+  Recipient,
+  ResumeProgress,
+  Student,
+} from "../types";
 import { localized, t } from "../i18n";
 import { emailDraftUrl } from "../emailDraft";
+import {
+  completeResumeEmailLink,
+  isResumeEmailLink,
+  newResumeToken,
+  resumeTokenFromUrl,
+  savedResumeEmail,
+  savedResumeToken,
+  saveResumeLocally,
+  sendResumeLink,
+} from "../resume";
 const blank: Student = {
   name: "",
   email: "",
@@ -155,7 +173,95 @@ export function Petition({ lang }: { lang: Lang }) {
     [error, setError] = useState(""),
     [showErrors, setShowErrors] = useState(false),
     [busy, setBusy] = useState(false),
-    [draftOpened, setDraftOpened] = useState<Prepared>();
+    [draftOpened, setDraftOpened] = useState<Prepared>(),
+    [resumeNotice, setResumeNotice] = useState(""),
+    [resumeToken, setResumeToken] = useState(
+      () => resumeTokenFromUrl() || savedResumeToken(),
+    ),
+    [resumeEmail, setResumeEmail] = useState(() => savedResumeEmail()),
+    [resumeEmailPrompt, setResumeEmailPrompt] = useState(
+      () =>
+        Boolean(
+          (resumeTokenFromUrl() || savedResumeToken()) &&
+            isResumeEmailLink() &&
+            !savedResumeEmail(),
+        ),
+    ),
+    [resumeRequest, setResumeRequest] = useState<{
+      token: string;
+      email: string;
+    }>();
+  const restoredToken = useRef("");
+  const completeResumeLink = useCallback(
+    async (email: string, token: string) => {
+      setBusy(true);
+      setError("");
+      try {
+        const result = await completeResumeEmailLink(email.trim().toLowerCase());
+        const verifiedEmail = result.user.email?.toLowerCase();
+        if (!verifiedEmail)
+          throw new Error("This email link did not include an email address.");
+        saveResumeLocally(verifiedEmail, token);
+        setResumeEmailPrompt(false);
+        setResumeRequest({ token, email: verifiedEmail });
+      } catch (linkError) {
+        setError(
+          localized(
+            lang,
+            `We could not verify this email link. ${message(linkError)}`,
+            `இந்த மின்னஞ்சல் இணைப்பை சரிபார்க்க முடியவில்லை. ${message(linkError)}`,
+          ),
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [lang],
+  );
+  useEffect(() => {
+    if (!resumeToken || !isResumeEmailLink()) return;
+    const email = savedResumeEmail();
+    if (email)
+      queueMicrotask(() => void completeResumeLink(email, resumeToken));
+  }, [completeResumeLink, resumeToken]);
+  useEffect(
+    () =>
+      auth.onAuthStateChanged((user) => {
+        const token = resumeTokenFromUrl() || savedResumeToken();
+        if (user?.email && token)
+          setResumeRequest({ token, email: user.email.toLowerCase() });
+      }),
+    [],
+  );
+  useEffect(() => {
+    if (!resumeRequest || restoredToken.current === resumeRequest.token) return;
+    restoredToken.current = resumeRequest.token;
+    setBusy(true);
+    void httpsCallable<
+      { resumeToken: string },
+      { progress: ResumeProgress; expiresAt: string }
+    >(functions, "getResume")({ resumeToken: resumeRequest.token })
+      .then(({ data }) => {
+        setStudent({ ...blank, ...data.progress.student, email: resumeRequest.email });
+        setSignature(data.progress.signature);
+        setConsents([...data.progress.consents, false, false, false, false].slice(0, 4));
+        setSelected(data.progress.selected);
+        setStep(Math.min(4, Math.max(0, data.progress.step)));
+        setResumeNotice(
+          localized(
+            lang,
+            "Your saved petition has been restored.",
+            "உங்கள் சேமித்த மனு மீட்டமைக்கப்பட்டது.",
+          ),
+        );
+        window.history.replaceState({}, "", "/petition");
+      })
+      .catch((restoreError: unknown) => {
+        restoredToken.current = "";
+        setError(message(restoreError));
+      })
+      .finally(() => setBusy(false));
+  }, [resumeRequest, lang]);
   useEffect(() => {
     if (step !== 4) return;
     let cancelled = false;
@@ -344,6 +450,54 @@ export function Petition({ lang }: { lang: Lang }) {
       setBusy(false);
     }
   };
+  const saveAndContinueLater = async () => {
+    const email = student.email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setShowErrors(true);
+      setError(
+        localized(
+          lang,
+          "Enter your email address before saving this petition.",
+          "இந்த மனுவைச் சேமிப்பதற்கு முன் உங்கள் மின்னஞ்சல் முகவரியை உள்ளிடவும்.",
+        ),
+      );
+      return;
+    }
+    if (!firebaseConfigured) {
+      setError("Secure resume is unavailable until Firebase is configured.");
+      return;
+    }
+    const token = resumeToken || savedResumeToken() || newResumeToken();
+    const progress: ResumeProgress = {
+      student: { ...student, email },
+      signature,
+      consents,
+      selected,
+      step,
+    };
+    setBusy(true);
+    setError("");
+    try {
+      await httpsCallable<
+        { email: string; resumeToken: string; progress: ResumeProgress },
+        { expiresAt: string }
+      >(functions, "saveResume")({ email, resumeToken: token, progress });
+      saveResumeLocally(email, token);
+      setResumeToken(token);
+      await sendResumeLink(email, token);
+      setResumeNotice(
+        localized(
+          lang,
+          "A secure continue link has been sent to your email. It is valid for 30 days.",
+          "பாதுகாப்பான தொடர்ச்சி இணைப்பு உங்கள் மின்னஞ்சலுக்கு அனுப்பப்பட்டுள்ளது. இது 30 நாட்களுக்கு செல்லுபடியாகும்.",
+        ),
+      );
+    } catch (saveError) {
+      setError(message(saveError));
+    } finally {
+      setBusy(false);
+    }
+  };
   const openEmailDraft = (service: "gmail" | "default") => {
     if (!prepared) return;
     prepared.attachments.forEach((attachment) =>
@@ -354,6 +508,17 @@ export function Petition({ lang }: { lang: Lang }) {
     else window.location.assign(url);
     setDraftOpened(prepared);
   };
+  if (resumeEmailPrompt)
+    return (
+      <ResumeEmailConfirmation
+        lang={lang}
+        email={resumeEmail}
+        setEmail={setResumeEmail}
+        busy={busy}
+        error={error}
+        onContinue={() => void completeResumeLink(resumeEmail, resumeToken)}
+      />
+    );
   if (draftOpened)
     return <DraftReady lang={lang} prepared={draftOpened} onOpen={openEmailDraft} />;
   return (
@@ -406,6 +571,14 @@ export function Petition({ lang }: { lang: Lang }) {
             className="mb-5 rounded-lg border border-red-300 bg-red-50 p-4 text-red-800"
           >
             {error}
+          </div>
+        )}
+        {resumeNotice && (
+          <div
+            role="status"
+            className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900"
+          >
+            {resumeNotice}
           </div>
         )}
         {step === 0 && (
@@ -463,7 +636,7 @@ export function Petition({ lang }: { lang: Lang }) {
         {step === 5 && prepared && (
           <EmailReview lang={lang} prepared={prepared} />
         )}
-        <div className="fixed inset-x-0 bottom-0 z-30 flex justify-between gap-3 border-t bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,.12)] backdrop-blur md:static md:mt-8 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+        <div className="fixed inset-x-0 bottom-0 z-30 flex flex-wrap justify-between gap-3 border-t bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,.12)] backdrop-blur md:static md:mt-8 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
           {step > 0 && (
             <button
               className="btn-secondary"
@@ -471,6 +644,19 @@ export function Petition({ lang }: { lang: Lang }) {
               onClick={() => setStep((s) => s - 1)}
             >
               {t(lang, "back")}
+            </button>
+          )}
+          {step < 5 && (
+            <button
+              className="btn-secondary"
+              disabled={busy}
+              onClick={() => void saveAndContinueLater()}
+            >
+              {localized(
+                lang,
+                "Save & continue later",
+                "சேமித்து பின்னர் தொடரவும்",
+              )}
             </button>
           )}
           <button
@@ -1096,6 +1282,68 @@ function DraftReady({
           {localized(lang, "Print petition record", "மனு பதிவை அச்சிடவும்")}
         </button>
       </div>
+    </div>
+  );
+}
+function ResumeEmailConfirmation({
+  lang,
+  email,
+  setEmail,
+  busy,
+  error,
+  onContinue,
+}: {
+  lang: Lang;
+  email: string;
+  setEmail: (email: string) => void;
+  busy: boolean;
+  error: string;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="card mx-auto my-12 max-w-xl p-6 sm:p-9">
+      <p className="text-sm font-bold uppercase tracking-wider text-green">
+        {localized(lang, "Secure petition resume", "பாதுகாப்பான மனு தொடர்ச்சி")}
+      </p>
+      <h1 className="mt-2 text-2xl font-bold text-navy sm:text-3xl">
+        {localized(
+          lang,
+          "Confirm your email address",
+          "உங்கள் மின்னஞ்சல் முகவரியை உறுதிப்படுத்தவும்",
+        )}
+      </h1>
+      <p className="mt-3 leading-6 text-slate-600">
+        {localized(
+          lang,
+          "For your privacy, enter the email address where this one-time link was received. We will then restore your saved petition.",
+          "உங்கள் தனியுரிமைக்காக, இந்த ஒரு முறை இணைப்பு வந்த மின்னஞ்சல் முகவரியை உள்ளிடவும். பின்னர் உங்கள் சேமித்த மனு மீட்டமைக்கப்படும்.",
+        )}
+      </p>
+      {error && (
+        <div role="alert" className="mt-5 rounded-lg border border-red-300 bg-red-50 p-4 text-red-800">
+          {error}
+        </div>
+      )}
+      <label className="mt-6 block text-sm font-semibold text-navy">
+        {localized(lang, "Email address", "மின்னஞ்சல் முகவரி")}
+        <input
+          className="input mt-2"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@example.com"
+        />
+      </label>
+      <button
+        className="btn-primary mt-6 w-full"
+        disabled={busy || !/^\S+@\S+\.\S+$/.test(email)}
+        onClick={onContinue}
+      >
+        {busy
+          ? localized(lang, "Verifyingâ€¦", "சரிபார்க்கப்படுகிறதுâ€¦")
+          : localized(lang, "Resume my petition", "என் மனுவைத் தொடரவும்")}
+      </button>
     </div>
   );
 }
