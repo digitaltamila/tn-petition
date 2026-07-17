@@ -488,8 +488,8 @@ export function Petition({ lang }: { lang: Lang }) {
       setResumeNotice(
         localized(
           lang,
-          "A secure continue link has been sent to your email. It is valid for 30 days.",
-          "பாதுகாப்பான தொடர்ச்சி இணைப்பு உங்கள் மின்னஞ்சலுக்கு அனுப்பப்பட்டுள்ளது. இது 30 நாட்களுக்கு செல்லுபடியாகும்.",
+          "A secure continue link has been sent to your email. Your saved petition can be resumed for up to 30 days.",
+          "பாதுகாப்பான தொடர்ச்சி இணைப்பு உங்கள் மின்னஞ்சலுக்கு அனுப்பப்பட்டுள்ளது. உங்கள் சேமித்த மனுவை 30 நாட்கள் வரை தொடரலாம்.",
         ),
       );
     } catch (saveError) {
