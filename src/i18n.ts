@@ -7,7 +7,7 @@ const common = {
     start: "மனுவைத் தொடங்கவும்",
     independent:
       "இது தமிழ்நாடு அரசின் அதிகாரப்பூர்வ இணையதளம் அல்ல. தேர்வர்கள் தங்கள் கோரிக்கையை சம்பந்தப்பட்ட அரசு அதிகாரிகளுக்கு அனுப்ப உதவும் சுயாதீன தளம்.",
-    own: "உங்கள் இறுதி ஒப்புதலுக்குப் பிறகு மட்டுமே, உங்கள் சொந்த Gmail கணக்கிலிருந்து மின்னஞ்சல் அனுப்பப்படும்.",
+    own: "இந்த தளம் PDF மற்றும் முன்பூர்த்தி செய்யப்பட்ட மின்னஞ்சல் வரைவைத் தயாரிக்கும். PDF-ஐ இணைத்து மின்னஞ்சலை நீங்களே அனுப்புவீர்கள்.",
     details: "உங்கள் விவரங்கள்",
     signature: "கையொப்பம்",
     consent: "ஒப்புதல்",
@@ -24,7 +24,7 @@ const common = {
     start: "Start your petition",
     independent:
       "This independent platform helps aspirants send their representation to relevant authorities. It is not an official Tamil Nadu Government website.",
-    own: "The email is sent from your own Gmail account only after your final review and approval.",
+    own: "The site prepares the PDF and a pre-filled email draft. You attach the PDF and send it yourself.",
     details: "Your details",
     signature: "Signature",
     consent: "Your consent",
@@ -42,7 +42,7 @@ export const landingCopy = {
     eyebrow: "A responsible, individual representation",
     heroTitle: "Let your request reach the right authorities",
     heroText:
-      "Prepare a personalised Tamil Nadu police recruitment petition, sign it, review it and send it securely from your own Gmail account.",
+      "Prepare a personalised Tamil Nadu police recruitment petition, sign it, review it and open a ready-to-send email draft.",
     requestsTitle: "What this petition requests",
     requests: [
       "Publish pending police recruitment results promptly",
@@ -67,12 +67,12 @@ export const landingCopy = {
       [
         "4",
         "Send yourself",
-        "Sign in to Google and make the final send decision.",
+        "Download the PDF, attach it to the ready email draft and press Send yourself.",
       ],
     ],
-    safetyTitle: "Your account stays in your control",
+    safetyTitle: "No account access needed",
     safetyText:
-      "We request only Gmail send permission. We never ask for your Gmail password, OTP, Aadhaar or banking details.",
+      "We do not request access to your Gmail account. You attach the downloaded PDF and send the prepared email yourself.",
     disclaimer:
       "Independent public initiative — not affiliated with the Tamil Nadu Government.",
   },
@@ -80,7 +80,7 @@ export const landingCopy = {
     eyebrow: "பொறுப்பான தனிப்பட்ட பொதுமனு",
     heroTitle: "உங்கள் கோரிக்கை உரிய அதிகாரிகளைச் சென்றடையட்டும்",
     heroText:
-      "தமிழ்நாடு காவல்துறை ஆட்சேர்ப்பு தொடர்பான தனிப்பட்ட மனுவைத் தயாரித்து, கையொப்பமிட்டு, ஆய்வு செய்து உங்கள் சொந்த Gmail கணக்கிலிருந்து பாதுகாப்பாக அனுப்புங்கள்.",
+      "தமிழ்நாடு காவல்துறை ஆட்சேர்ப்பு தொடர்பான தனிப்பட்ட மனுவைத் தயாரித்து, கையொப்பமிட்டு, ஆய்வு செய்து தயாரான மின்னஞ்சல் வரைவைத் திறக்கவும்.",
     requestsTitle: "இந்த மனுவின் முக்கிய கோரிக்கைகள்",
     requests: [
       "நிலுவையில் உள்ள காவல்துறை ஆட்சேர்ப்புத் தேர்வு முடிவுகளை விரைந்து வெளியிடுதல்",
@@ -109,12 +109,12 @@ export const landingCopy = {
       [
         "4",
         "நீங்களே அனுப்புங்கள்",
-        "Google கணக்கில் உள்நுழைந்து இறுதி முடிவை எடுக்கவும்.",
+        "PDF-ஐப் பதிவிறக்கி, தயாரான மின்னஞ்சல் வரைவில் இணைத்து நீங்களே அனுப்பவும்.",
       ],
     ],
-    safetyTitle: "உங்கள் கணக்கு உங்கள் கட்டுப்பாட்டில்",
+    safetyTitle: "கணக்கு அணுகல் தேவையில்லை",
     safetyText:
-      "Gmail மூலம் அனுப்பும் அனுமதி மட்டுமே கோரப்படும். Gmail கடவுச்சொல், OTP, Aadhaar அல்லது வங்கி விவரங்களை ஒருபோதும் கேட்கமாட்டோம்.",
+      "உங்கள் Gmail கணக்கிற்கான அணுகலை நாங்கள் கோரமாட்டோம். பதிவிறக்கிய PDF-ஐ இணைத்து தயாரான மின்னஞ்சலை நீங்களே அனுப்புவீர்கள்.",
     disclaimer: "சுயாதீன பொதுநல முயற்சி — தமிழ்நாடு அரசுடன் இணைக்கப்படவில்லை.",
   },
 } as const;
