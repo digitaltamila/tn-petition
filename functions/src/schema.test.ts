@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { draftSchema } from "./schema.js";
+import { draftSchema, saveResumeSchema } from "./schema.js";
 const valid = {
   student: {
     name: "தமிழரசன்",
@@ -39,6 +39,34 @@ describe("server validation", () => {
       draftSchema.safeParse({
         ...valid,
         signature: `data:image/png;base64,${"a".repeat(400001)}`,
+      }).success,
+    ).toBe(false));
+  it("accepts an in-progress petition for secure resume", () =>
+    expect(
+      saveResumeSchema.safeParse({
+        email: valid.student.email,
+        resumeToken: valid.idempotencyKey,
+        progress: {
+          student: valid.student,
+          signature: "",
+          consents: [true],
+          selected: [],
+          step: 1,
+        },
+      }).success,
+    ).toBe(true));
+  it("requires the saved form email to be valid", () =>
+    expect(
+      saveResumeSchema.safeParse({
+        email: "student@example.com",
+        resumeToken: valid.idempotencyKey,
+        progress: {
+          student: { ...valid.student, email: "not-an-email" },
+          signature: "",
+          consents: [],
+          selected: [],
+          step: 0,
+        },
       }).success,
     ).toBe(false));
 });
