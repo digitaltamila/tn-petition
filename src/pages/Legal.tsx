@@ -7,7 +7,7 @@ const copy = {
       "Privacy policy",
       [
         "We collect only the applicant information needed to prepare the requested petition. If the applicant chooses Save and continue later, the form details and signature are protected by email-link sign-in and can be resumed for up to 30 days. Temporary PDFs are not retained after the petition is prepared.",
-        "We do not request access to Gmail. The applicant downloads the PDF, attaches it and sends the prepared email from their own email app.",
+        "The applicant downloads the PDF, attaches it to the prepared email and sends it from their own email app.",
       ],
     ],
     terms: [
@@ -47,7 +47,7 @@ const copy = {
       "தனியுரிமைக் கொள்கை",
       [
         "கோரப்பட்ட மனுவைத் தயாரிக்கத் தேவையான தகவல்கள் மட்டுமே சேகரிக்கப்படும். கையொப்பம், முழு முகவரி மற்றும் தற்காலிக PDF மனு தயாரிக்கப்பட்ட பிறகு சேமிக்கப்படாது.",
-        "Gmail அணுகலை நாங்கள் கோரமாட்டோம். விண்ணப்பதாரர் PDF-ஐ பதிவிறக்கி, இணைத்து, தங்கள் மின்னஞ்சல் செயலியில் தயாரான மின்னஞ்சலை அனுப்புவார்.",
+        "விண்ணப்பதாரர் PDF-ஐ பதிவிறக்கி, தயாரான மின்னஞ்சலில் இணைத்து, தங்கள் மின்னஞ்சல் செயலியில் இருந்து அனுப்புவார்.",
       ],
     ],
     terms: [
