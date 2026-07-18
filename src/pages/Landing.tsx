@@ -117,16 +117,16 @@ export function Landing({ lang }: { lang: Lang }) {
                 <h3 className="text-xl font-bold text-navy">
                   {localized(
                     lang,
-                    "Why Google access is requested",
-                    "Google அணுகல் ஏன் கோரப்படுகிறது",
+                    "How sending works",
+                    "அனுப்பும் நடைமுறை",
                   )}
                 </h3>
               </div>
               <p className="mt-4 leading-7 text-slate-600">
                 {localized(
                   lang,
-                  "After reviewing the petition, the applicant downloads the PDF and opens a pre-filled email draft. The applicant attaches the PDF and presses Send from their own email app. This website does not request access to Gmail, inbox messages, drafts, contacts or settings.",
-                  "மனுவை ஆய்வு செய்த பிறகு விண்ணப்பதாரர் PDF-ஐப் பதிவிறக்கி, முன்பூர்த்தி செய்யப்பட்ட மின்னஞ்சல் வரைவைத் திறப்பார். PDF-ஐ இணைத்து தங்கள் சொந்த மின்னஞ்சல் செயலியில் அனுப்பு என்பதை அழுத்துவார். இந்த இணையதளம் Gmail, inbox செய்திகள், drafts, contacts அல்லது settings-க்கான அணுகலை கோராது.",
+                  "After you review the petition, download the PDF and open the prepared email draft. Attach the PDF, check the recipients and press Send from your own email app.",
+                  "மனுவை ஆய்வு செய்த பிறகு PDF-ஐப் பதிவிறக்கி தயாரான மின்னஞ்சல் வரைவைத் திறக்கவும். PDF-ஐ இணைத்து, பெறுநர்களைச் சரிபார்த்து, உங்கள் மின்னஞ்சல் செயலியில் அனுப்பு என்பதை அழுத்தவும்.",
                 )}
               </p>
             </article>

@@ -24,7 +24,7 @@ const common = {
     start: "Start your petition",
     independent:
       "This independent platform helps aspirants send their representation to relevant authorities. It is not an official Tamil Nadu Government website.",
-    own: "The site prepares the PDF and a pre-filled email draft. You attach the PDF and send it yourself.",
+    own: "Fill the form, download your PDF and send the prepared email yourself.",
     details: "Your details",
     signature: "Signature",
     consent: "Your consent",
@@ -42,7 +42,7 @@ export const landingCopy = {
     eyebrow: "A responsible, individual representation",
     heroTitle: "Let your request reach the right authorities",
     heroText:
-      "Prepare a personalised Tamil Nadu police recruitment petition, sign it, review it and open a ready-to-send email draft.",
+      "Prepare a personalised Tamil Nadu police recruitment petition, review the PDF and send it from your own email app.",
     requestsTitle: "What this petition requests",
     requests: [
       "Publish pending police recruitment results promptly",
@@ -51,7 +51,7 @@ export const landingCopy = {
     ],
     processTitle: "Simple, transparent and under your control",
     processText:
-      "Nothing is sent automatically. You review every detail before the final action.",
+      "Four clear steps: complete the form, review your petition, download the PDF and send the prepared email yourself. Need more time? Save and continue later from your email link.",
     process: [
       [
         "1",
@@ -67,12 +67,12 @@ export const landingCopy = {
       [
         "4",
         "Send yourself",
-        "Download the PDF, attach it to the ready email draft and press Send yourself.",
+        "Download the PDF, attach it to the prepared email and press Send yourself.",
       ],
     ],
-    safetyTitle: "No account access needed",
+    safetyTitle: "You stay in control",
     safetyText:
-      "We do not request access to your Gmail account. You attach the downloaded PDF and send the prepared email yourself.",
+      "The final email is sent by you from your own email app, after you attach the downloaded PDF and review the recipients.",
     disclaimer:
       "Independent public initiative — not affiliated with the Tamil Nadu Government.",
   },
@@ -89,7 +89,7 @@ export const landingCopy = {
     ],
     processTitle: "எளிமையான, வெளிப்படையான நடைமுறை",
     processText:
-      "எதுவும் தானாக அனுப்பப்படாது. இறுதி நடவடிக்கைக்கு முன் ஒவ்வொரு விவரத்தையும் நீங்களே ஆய்வு செய்வீர்கள்.",
+      "நான்கு எளிய படிகள்: படிவத்தை நிரப்பவும், மனுவை ஆய்வு செய்யவும், PDF-ஐ பதிவிறக்கவும், தயாரான மின்னஞ்சலை நீங்களே அனுப்பவும். கூடுதல் நேரம் தேவைப்பட்டால், மின்னஞ்சல் இணைப்பின் மூலம் சேமித்து பின்னர் தொடரலாம்.",
     process: [
       [
         "1",
@@ -112,9 +112,9 @@ export const landingCopy = {
         "PDF-ஐப் பதிவிறக்கி, தயாரான மின்னஞ்சல் வரைவில் இணைத்து நீங்களே அனுப்பவும்.",
       ],
     ],
-    safetyTitle: "கணக்கு அணுகல் தேவையில்லை",
+    safetyTitle: "உங்கள் கட்டுப்பாட்டில்",
     safetyText:
-      "உங்கள் Gmail கணக்கிற்கான அணுகலை நாங்கள் கோரமாட்டோம். பதிவிறக்கிய PDF-ஐ இணைத்து தயாரான மின்னஞ்சலை நீங்களே அனுப்புவீர்கள்.",
+      "பதிவிறக்கிய PDF-ஐ இணைத்து, பெறுநர்களைச் சரிபார்த்த பிறகு உங்கள் மின்னஞ்சல் செயலியில் இருந்து இறுதி மின்னஞ்சலை நீங்களே அனுப்புவீர்கள்.",
     disclaimer: "சுயாதீன பொதுநல முயற்சி — தமிழ்நாடு அரசுடன் இணைக்கப்படவில்லை.",
   },
 } as const;

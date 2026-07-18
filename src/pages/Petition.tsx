@@ -669,8 +669,8 @@ export function Petition({ lang }: { lang: Lang }) {
               : step === 5
                 ? localized(
                     lang,
-                    "Download PDFs & open Gmail draft",
-                    "PDF-களைப் பதிவிறக்கி Gmail வரைவைத் திறக்கவும்",
+                    "Download PDFs & open email draft",
+                    "PDF-களைப் பதிவிறக்கி மின்னஞ்சல் வரைவைத் திறக்கவும்",
                   )
                 : t(lang, "continue")}
           </button>
@@ -1253,12 +1253,12 @@ function DraftReady({
       <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left text-sm leading-6 text-emerald-950">
         <p className="font-bold">Attach the downloaded PDF, then press Send yourself.</p>
         <p className="mt-1">
-          No Google account permission was requested. The site cannot confirm delivery because the final sending happens in your own email app.
+          Check the recipients, attach the downloaded PDF and press Send from your own email app. Delivery confirmation remains with your email provider.
         </p>
       </div>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <button className="btn-primary" onClick={() => onOpen("gmail")}>
-          Download PDFs & open Gmail
+          Download PDFs & open email draft
         </button>
         <button className="btn-secondary" onClick={() => onOpen("default")}>
           Open default email app
